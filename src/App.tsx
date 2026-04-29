@@ -7,9 +7,9 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 // Initialization helper
 let genAI: GoogleGenAI | null = null;
 const getAI = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
   if (!genAI) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
     genAI = new GoogleGenAI({ apiKey });
   }
   return genAI;
@@ -233,7 +233,12 @@ export default function App() {
 
     try {
       const ai = getAI();
-      const model = "gemini-3-flash-preview";
+      if (!ai) {
+        setError(t('IA nisqaqa manaraq kanchu. Clave-ta churay.', 'La configuración de la IA no está activa. Verifique su API Key.'));
+        setIsProcessing(false);
+        return;
+      }
+      const model = "gemini-1.5-flash";
       
       const prompt = `Eres el asistente virtual "Rimay" de la Institución Educativa Coronel Francisco Bolognesi en Cusco.
       Tu objetivo es ayudar a padres a entender la información del colegio.
@@ -266,9 +271,15 @@ export default function App() {
       setMessages(prev => [...prev, 
         { id: (Date.now() + 1).toString(), type: 'ai', text: data.reply, translation: data.replyTranslation, timestamp: now }
       ]);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Error IA.");
+      if (err.message?.includes('API_KEY_INVALID')) {
+        setError(t('IA Clave mana allinchu.', 'La clave de IA no es válida.'));
+      } else if (err.message?.includes('429')) {
+        setError(t('IA nishuta tapukuchkanki. Suyay.', 'Límite de mensajes alcanzado. Espere un momento.'));
+      } else {
+        setError(t('IA pantaypi kachkan.', 'Error de conexión con la IA. Intente de nuevo.'));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -440,7 +451,12 @@ export default function App() {
       const base64Data = await base64Promise;
 
       const ai = getAI();
-      const model = "gemini-3-flash-preview";
+      if (!ai) {
+        setError(t('IA nisqaqa manaraq kanchu. Clave-ta churay.', 'La IA no está configurada o activa.'));
+        setIsProcessing(false);
+        return;
+      }
+      const model = "gemini-1.5-flash";
       
       const prompt = `Eres el asistente virtual "Rimay" de la Institución Educativa Coronel Francisco Bolognesi en Cusco.
       Tu objetivo es ayudar a padres quechuahablantes a entender la información del colegio.
@@ -483,9 +499,13 @@ export default function App() {
         { id: Date.now().toString(), type: 'user', text: data.transcription, translation: data.translation, timestamp: now },
         { id: (Date.now() + 1).toString(), type: 'ai', text: data.reply, translation: data.replyTranslation, timestamp: now }
       ]);
-    } catch (err) {
-      console.error(err);
-      setError("Error IA.");
+    } catch (err: any) {
+      console.error("AI Error:", err);
+      if (err.message?.includes('API_KEY_INVALID')) {
+        setError(t('IA Clave mana allinchu.', 'La clave de IA no es válida.'));
+      } else {
+        setError(t('IA Rimaypi pantay kachkan.', 'Hubo un error al procesar el audio con la IA.'));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -1289,7 +1309,25 @@ export default function App() {
                   </div>
                   {/* Assistant Chat Interface Integrated */}
                   <div className="flex-1 overflow-y-auto minimal-scrollbar mb-4 space-y-4 pr-2">
-                    {messages.length === 0 ? (
+                    {error && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }} 
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-red-50 border border-red-200 p-4 rounded-2xl flex items-start gap-3 mb-4"
+                      >
+                        <AlertCircle className="size-5 text-red-500 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-red-800 font-bold text-sm">{error}</p>
+                          <p className="text-red-600 text-[10px] mt-1 uppercase font-sans font-black">
+                            {t('Ima pantaypas kanman chhika, Intranet-man willay.', 'Si el problema persiste, contacte con soporte de la Intranet.')}
+                          </p>
+                        </div>
+                        <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 transition-colors">
+                          <X size={16} />
+                        </button>
+                      </motion.div>
+                    )}
+                    {messages.length === 0 && !error ? (
                       <div className="flex flex-col items-center justify-center h-full opacity-30 text-center px-12">
                          <div className="w-20 h-20 bg-geo-primary/10 rounded-full flex items-center justify-center mb-6">
                             <Mic className="text-geo-primary size-10" />
