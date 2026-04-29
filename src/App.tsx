@@ -232,14 +232,6 @@ export default function App() {
     setMessages(prev => [...prev, { id: newMessageId, type: 'user', text: textToSend, timestamp: now }]);
 
     try {
-      const ai = getAI();
-      if (!ai) {
-        setError(t('IA nisqaqa manaraq kanchu. Clave-ta churay.', 'La configuración de la IA no está activa. Verifique su API Key.'));
-        setIsProcessing(false);
-        return;
-      }
-      const model = "gemini-1.5-flash";
-      
       const prompt = `Eres el asistente virtual "Rimay" de la Institución Educativa Coronel Francisco Bolognesi en Cusco.
       Tu objetivo es ayudar a padres a entender la información del colegio.
       Los datos actuales del alumno son: ${JSON.stringify(STUDENT_DATA)}.
@@ -260,13 +252,21 @@ export default function App() {
         "replyTranslation": "..."
       }`;
 
-      const result = await ai.models.generateContent({
-        model: model,
-        contents: [{ parts: [{ text: prompt }] }],
-        config: { responseMimeType: "application/json" }
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, model: "gemini-1.5-flash" })
       });
 
-      const data = JSON.parse(result.text);
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to get AI response');
+      }
+
+      const resData = await response.json();
+      const aiText = resData.text;
+      const cleanJson = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const data = JSON.parse(cleanJson);
       
       setMessages(prev => [...prev, 
         { id: (Date.now() + 1).toString(), type: 'ai', text: data.reply, translation: data.replyTranslation, timestamp: now }
@@ -450,15 +450,11 @@ export default function App() {
       reader.readAsDataURL(blob);
       const base64Data = await base64Promise;
 
-      const ai = getAI();
-      if (!ai) {
-        setError(t('IA nisqaqa manaraq kanchu. Clave-ta churay.', 'La IA no está configurada o activa.'));
-        setIsProcessing(false);
-        return;
-      }
-      const model = "gemini-1.5-flash";
-      
-      const prompt = `Eres el asistente virtual "Rimay" de la Institución Educativa Coronel Francisco Bolognesi en Cusco.
+      const response = await fetch('/api/ai/audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `Eres el asistente virtual "Rimay" de la Institución Educativa Coronel Francisco Bolognesi en Cusco.
       Tu objetivo es ayudar a padres quechuahablantes a entender la información del colegio.
       Los datos actuales del alumno son: ${JSON.stringify(STUDENT_DATA)}.
       Los datos de asistencia son: ${JSON.stringify(attendance)}.
@@ -477,22 +473,21 @@ export default function App() {
         "translation": "...",
         "reply": "...",
         "replyTranslation": "..."
-      }`;
-
-      const result = await ai.models.generateContent({
-        model: model,
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType: 'audio/webm', data: base64Data } }
-            ]
-          }
-        ],
-        config: { responseMimeType: "application/json" }
+      }`,
+          audioBase64: base64Data,
+          model: "gemini-1.5-flash"
+        })
       });
 
-      const data = JSON.parse(result.text);
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to process audio');
+      }
+
+      const resData = await response.json();
+      const aiText = resData.text;
+      const cleanJson = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const data = JSON.parse(cleanJson);
       const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       setMessages(prev => [...prev, 
