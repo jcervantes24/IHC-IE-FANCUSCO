@@ -509,30 +509,29 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <div className={`w-full min-h-screen ${isDarkMode ? 'dark' : ''} bg-geo-bg text-geo-text flex items-center justify-center font-serif p-6 transition-colors duration-300`}>
-        {/* Theme Toggle in Login */}
-        <div className="absolute top-8 right-44 z-10">
+        {/* Theme and Language Controls on Login */}
+        <div className="absolute top-6 right-6 md:top-8 md:right-8 flex items-center gap-3 md:gap-4 z-10">
           <button 
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-geo-surface border border-geo-border text-geo-muted hover:text-geo-primary transition-all shadow-sm"
+            className="w-10 h-10 flex shrink-0 items-center justify-center rounded-full bg-geo-surface border border-geo-border text-geo-muted hover:text-geo-primary transition-all shadow-sm"
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-        </div>
-        
-        {/* Language Switcher on Login */}
-        <div className="absolute top-8 right-8 flex gap-2">
+          
+          <div className="flex gap-1 md:gap-2 bg-geo-surface/80 p-1 rounded-full border border-geo-border backdrop-blur-sm">
             <button 
               onClick={() => setLanguage('qu')}
-              className={`px-4 py-2 rounded-full text-[10px] font-sans font-black uppercase tracking-widest transition-all ${language === 'qu' ? 'bg-geo-primary text-white shadow-lg shadow-geo-primary/20' : 'bg-geo-surface text-geo-muted border border-geo-border hover:border-geo-primary'}`}
+              className={`px-3 md:px-4 py-2 rounded-full text-[9px] md:text-[10px] font-sans font-black uppercase tracking-widest transition-all ${language === 'qu' ? 'bg-geo-primary text-white shadow-lg shadow-geo-primary/20' : 'text-geo-muted hover:text-geo-primary'}`}
             >
               Runasimi
             </button>
             <button 
               onClick={() => setLanguage('es')}
-              className={`px-4 py-2 rounded-full text-[10px] font-sans font-black uppercase tracking-widest transition-all ${language === 'es' ? 'bg-geo-primary text-white shadow-lg shadow-geo-primary/20' : 'bg-geo-surface text-geo-muted border border-geo-border hover:border-geo-primary'}`}
+              className={`px-3 md:px-4 py-2 rounded-full text-[9px] md:text-[10px] font-sans font-black uppercase tracking-widest transition-all ${language === 'es' ? 'bg-geo-primary text-white shadow-lg shadow-geo-primary/20' : 'text-geo-muted hover:text-geo-primary'}`}
             >
                Español
             </button>
+          </div>
         </div>
 
         <motion.div 
@@ -1444,19 +1443,7 @@ export default function App() {
         </section>
       </main>
 
-      {/* Bottom Status Bar */}
-      <footer className="h-10 bg-geo-text text-geo-bg flex items-center justify-between px-12 text-[9px] uppercase tracking-widest font-sans font-bold shrink-0 relative z-20">
-        <div className="flex items-center gap-8">
-          <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span> 
-            {t('Llamk\'achkan: I.E. Bolognesi', 'Sistema en Línea: I.E. Bolognesi')}
-          </span>
-        </div>
-        <div className="flex gap-8">
-          <span className="opacity-70">{t('Cusco-pi, Zarzuela Alta S/N', 'Zarzuela Alta S/N, Cusco')}</span>
-          <span className="hidden sm:inline">© 2026 Rimay Education</span>
-        </div>
-      </footer>
+
 
       {/* Assistant Help Modal */}
       <AnimatePresence>
