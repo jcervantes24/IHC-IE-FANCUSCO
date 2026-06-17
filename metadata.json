@@ -7,6 +7,7 @@
   "majorCapabilities": [
     "audio_processing",
     "ai_transcription",
-    "educational_portal"
+    "educational_portal",
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }
