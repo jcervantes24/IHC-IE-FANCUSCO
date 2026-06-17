@@ -1,406 +1,702 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Mic, Square, Volume2, VolumeX, ChevronLeft, User, 
-  Calendar, BookOpen, MessageCircle, BarChart3, ArrowRight, 
-  GraduationCap, Info, CheckCircle, Clock 
-} from 'lucide-react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
-  Legend, ResponsiveContainer, AreaChart, Area 
-} from 'recharts';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Mic, Square, Loader2, Volume2, CheckCircle, AlertCircle, MessageCircle, Info, FileText, ChevronLeft, VolumeX, PlayCircle, StopCircle, User, Calendar, BookOpen, Sun, Moon, Share2 } from 'lucide-react';
 
-// Datos fijos de la intranet escolar
-const STUDENT_DATA = { 
-  name: "Alex Quispe Condori", 
-  school: "I.E. Coronel Francisco Bolognesi", 
-  nextEvent: "Reunión de Padres - 25 Abril" 
+type Language = 'qu' | 'es' | null;
+type View = 'splash' | 'login' | 'home' | 'chat' | 'messages' | 'attendance' | 'tasks' | 'calendar';
+
+const STUDENT_DATA = {
+  name: "Alex Quispe Condori",
+  school: "I.E. Coronel Francisco Bolognesi",
+  nextEvent: "Reunión de Padres - 25 Abril",
 };
 
 const MESSAGES = [
-  { id: 1, date: '23 Abr.', subject: 'Dirección', es: 'No hay clases mañana por desinfección del colegio.', qu: 'Manam paqarin yachaywasi kanqachu, pichanqaku chaymi.' },
-  { id: 2, date: '21 Abr.', subject: 'Prof. Tutor', es: 'Reunión de padres este viernes a las 4 de la tarde.', qu: 'Tayta mamakuna huñunakuy kanqa kay diviernes tawa aspiyta.' }
+  { id: 1, date: '23 Abril', es: 'No hay clases mañana por desinfección del colegio.', qu: 'Manam paqarin yachaywasi kanqachu, pichanqaku chaymi.' },
+  { id: 2, date: '21 Abril', es: 'Reunión de padres este viernes a las 4pm.', qu: 'Tayta mamakuna huñunakuy kanqa kay diviernes tawa aspiyta.' }
 ];
 
 const TASKS = [
-  { id: 1, subject: 'Matemáticas', es: 'Hacer páginas 12 y 13 del libro de trabajo.', qu: 'Yupay yachay rapikunata chunka iskayniyuq, chunka kimsayuqpas ruwana.', due: '25 Abr.', status: 'pending' },
-  { id: 2, subject: 'Ciencias', es: 'Dibujar las plantas nativas de la región del Cusco.', qu: 'Cusco yachaq yorakunata llimp`ina siqina.', due: '28 Abr.', status: 'completed' }
+  { id: 1, subject: 'Matemáticas', es: 'Hacer páginas 12 y 13 del libro.', qu: 'Yupay yachay rapikunata 12, 13 ruwana.', due: '25 Abril' },
+  { id: 2, subject: 'Comunicación', es: 'Traer un cuento corto familiar.', qu: 'Willakuyta apamuna.', due: '26 Abril' }
 ];
 
 const ATTENDANCE = [
-  { day: 'Lunes', status: 'Asistió', es: 'Asistencia normal.', qu: 'Allin chayamurqan.' },
-  { day: 'Martes', status: 'Asistió', es: 'Asistencia normal.', qu: 'Allin chayamurqan.' },
-  { day: 'Miércoles', status: 'Tardanza', es: 'Llegó 15 minutos tarde.', qu: 'Aslla qhipatam chayamurqan.' },
-  { day: 'Jueves', status: 'Asistió', es: 'Asistencia normal.', qu: 'Allin chayamurqan.' },
-  { day: 'Viernes', status: 'Falta', es: 'Falta injustificada.', qu: 'Manam chayamurqanchu.' }
+  { date: '24 Abril', status: 'present', es: 'Asistió', qu: 'Hamurqan' },
+  { date: '23 Abril', status: 'present', es: 'Asistió', qu: 'Hamurqan' },
+  { date: '22 Abril', status: 'absent', es: 'Faltó', qu: 'Mana hamurqanchu' }
 ];
 
-// Analíticas de usabilidad del ODS 10 (Semana 12)
-const METRICS_VOICE = [
-  { name: 'Mensajes', Español: 38, Quechua: 122 },
-  { name: 'Tareas', Español: 29, Quechua: 94 },
-  { name: 'Asistencia', Español: 14, Quechua: 108 }
-];
-
-const METRICS_PROGRESS = [
-  { name: 'Mar', porcentaje: 62 },
-  { name: 'Abr', porcentaje: 76 },
-  { name: 'May', porcentaje: 88 },
-  { name: 'Jun', porcentaje: 95 }
-];
-
-type View = 'splash' | 'login' | 'home' | 'messages' | 'tasks' | 'attendance' | 'dashboard';
+// Colors
+const COLORS = {
+  bg: '#F7F3EE', // crema cálido
+  text: '#8B5E3C', // marrón andino
+  terracotta: '#C97B63', // terracota suave
+  green: '#6B8F71', // verde natural
+  blue: '#A7C7E7', // azul cielo suave
+  white: '#FFFFFF',
+};
 
 export default function App() {
+  const [language, setLanguage] = useState<Language>(null);
   const [activeView, setActiveView] = useState<View>('splash');
-  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
+  const [dni, setDni] = useState('');
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+  
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentUtterance, setCurrentUtterance] = useState<SpeechSynthesisUtterance | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (activeView === 'splash') {
-      const timer = setTimeout(() => setActiveView('login'), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [activeView]);
+  const t = (es: string, qu: string) => language === 'es' ? es : qu;
 
-  // Manejo de la locución bilingüe nativa (Semana 11)
-  const speakText = (textEs: string, textQu: string, id: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      
-      if (isSpeaking && activeAudioId === id) {
-        setIsSpeaking(false);
-        setActiveAudioId(null);
-        return;
+  const handleShare = async (msg: { id: number, date: string, es: string, qu: string }) => {
+    const textToShare = `${msg.date} - ${language === 'es' ? msg.es : msg.qu}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: t('Aviso Escolar', 'Yachaywasi Willakuy'),
+          text: textToShare,
+        });
+      } catch (err) {
+        console.log('Error sharing:', err);
       }
-
-      const compositeText = `${textEs}. En quechua se entiende como: ${textQu}`;
-      const utterance = new SpeechSynthesisUtterance(compositeText);
-      utterance.lang = 'es-PE';
-      utterance.rate = 0.88;
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        setActiveAudioId(id);
-      };
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setActiveAudioId(null);
-      };
-
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        setActiveAudioId(null);
-      };
-
-      window.speechSynthesis.speak(utterance);
+    } else {
+      try {
+        await navigator.clipboard.writeText(textToShare);
+        setCopiedId(msg.id);
+        speakText('Mensaje copiado para compartir.', 'Aviso copiasqa hukman apanaykipaq.');
+        setTimeout(() => setCopiedId(null), 3000);
+      } catch (err) {
+        console.error('Failed to copy text:', err);
+      }
     }
   };
 
-  const stopSpeaking = () => {
+  const speakText = useCallback((textEs: string, textQu?: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const textToRead = language === 'qu' && textQu ? textQu : textEs;
+      const utterance = new SpeechSynthesisUtterance(textToRead);
+      utterance.lang = language === 'es' ? 'es-PE' : 'es-ES';
+      utterance.rate = 0.85;
+      
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      
+      setCurrentUtterance(utterance);
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [language]);
+
+  const stopSpeaking = useCallback(() => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
-      setActiveAudioId(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+    };
+  }, [stopSpeaking]);
+
+  const handleLanguageSelect = (lang: Language) => {
+    setLanguage(lang);
+    setActiveView('login');
+    if (lang === 'es') {
+      speakText('Has elegido español. Por favor, ingresa tu número de DNI para continuar.');
+    } else {
+      speakText('Españolta akllarunki. DNI yupayniykita qillqakuy.', 'Runasimita akllarunki. DNI yupayniykita qillqakuy haykunaykipaq.');
     }
   };
 
-  const toggleRecording = () => {
-    stopSpeaking();
-    if (!isRecording) {
-      setIsRecording(true);
-      setTimeout(() => {
-        setIsRecording(false);
-        alert("Mensaje de voz enviado de forma segura al colegio.");
-      }, 3500);
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (dni.length >= 8) {
+      setActiveView('home');
+      speakText('Bienvenido. Aquí puedes ver cómo le va a tu hijo.', 'Allin hamusqa kachkay. Kaypi wawaykiq yachayninmanta yachanki.');
     }
   };
+
+  const [chatMessages, setChatMessages] = useState<{id: string, sender: 'user'|'ai', text: string}[]>([]);
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [micError, setMicError] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const recognitionRef = useRef<any>(null);
+
+  const getLocalResponse = (text: string): { es: string, qu: string } => {
+    const lowerText = text.toLowerCase();
+    
+    if (lowerText.includes('asisti') || lowerText.includes('fue') || lowerText.includes('clases') || lowerText.includes('colegio')) {
+      return {
+        es: "Sí 😊, su hijo asistió correctamente hoy.",
+        qu: "Arí 😊, wawaykiqa kunan p'unchaw yachaywasiman rirqanmi."
+      };
+    }
+    
+    if (lowerText.includes('tarea') || lowerText.includes('deber') || lowerText.includes('trabajo')) {
+      return {
+        es: "Sí, tiene una tarea pendiente de matemáticas.",
+        qu: "Arí, yupay yachaymanta ruranan kachkan."
+      };
+    }
+    
+    if (lowerText.includes('reunión') || lowerText.includes('reunion') || lowerText.includes('tutor') || lowerText.includes('padres')) {
+      return {
+        es: "Mañana habrá reunión de padres a las 8 de la mañana.",
+        qu: "Paqarinmi tayta mamakuna huñunakuy kanqa 8 paqarinmanta."
+      };
+    }
+  
+    if (lowerText.includes('hola') || lowerText.includes('buenos') || lowerText.includes('tardes') || lowerText.includes('dias')) {
+      return {
+         es: "¡Hola! Soy Rimay. ¿En qué te puedo ayudar hoy con Alex?",
+         qu: "¡Allinllachu! Rimaymi kani. ¿Imapim yanapaykiman Alexmanta kunan p'unchaw?"
+      };
+    }
+  
+    if (lowerText.includes('nota') || lowerText.includes('calificacion')) {
+      return {
+        es: "Las notas de Alex están muy bien. Ha mejorado mucho.",
+        qu: "Alexpa notasninqa allinmi kachkan. Aswan allinta rurachkan."
+      };
+    }
+  
+    // Default
+    return {
+      es: "Entiendo. Sin embargo, no tengo esa información. ¿Hay algo más que te gustaría saber?",
+      qu: "Entiendenim. Ichaqa manam chay willakuyta hap'inichu. ¿Ima huknatataq yachayta munanki?"
+    };
+  };
+
+  const processTextInputValue = (text: string) => {
+    setIsProcessingVoice(true);
+    setChatMessages(prev => [...prev, { id: 'temp', sender: 'user', text }]);
+    
+    setTimeout(() => {
+      const response = getLocalResponse(text);
+      setChatMessages(prev => prev.filter(m => m.id !== 'temp').concat([
+        { id: Date.now().toString(), sender: 'ai', text: language === 'es' ? response.es : response.qu }
+      ]));
+      speakText(response.es, response.qu);
+      setIsProcessingVoice(false);
+    }, 1000);
+  };
+
+  const processTextInput = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!textInput.trim()) return;
+    const text = textInput;
+    setTextInput('');
+    processTextInputValue(text);
+  };
+
+  const startRecording = () => {
+    stopSpeaking();
+    setMicError(false);
+    
+    // @ts-ignore
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = language === 'es' ? 'es-PE' : 'es-PE';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognitionRef.current = recognition;
+
+      recognition.onstart = () => {
+        setIsRecording(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        const text = event.results[0][0].transcript;
+        processTextInputValue(text);
+      };
+
+      recognition.onerror = (event: any) => {
+        setMicError(true);
+        setIsRecording(false);
+        speakText('No pude escucharte bien. Prueba escribiendo.', 'Manam allintachu uyarini. Qillqay uraypi.');
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognition.start();
+    } else {
+       setMicError(true);
+       speakText('Tu navegador no soporta micrófono. Escribe abajo.', 'Manam atinichu. Qillqay uraypi.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (recognitionRef.current && isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // Reusable Audio Button
+  const AudioButton = ({ textEs, textQu, className = "" }: { textEs: string, textQu?: string, className?: string }) => (
+    <button
+      onClick={(e) => { e.stopPropagation(); isSpeaking ? stopSpeaking() : speakText(textEs, textQu); }}
+      className={`p-4 rounded-full shrink-0 shadow-sm transition-transform active:scale-90 ${isSpeaking ? 'bg-[#C97B63] text-white' : 'bg-white text-[#C97B63]'} ${className}`}
+    >
+      {isSpeaking ? <StopCircle size={28} /> : <Volume2 size={28} />}
+    </button>
+  );
+
+  const Header = ({ titleEs, titleQu, onBack }: { titleEs: string, titleQu: string, onBack: () => void }) => (
+    <div className="flex items-center gap-4 mb-8 pt-4">
+      <button 
+        onClick={() => { onBack(); stopSpeaking(); }}
+        className="p-4 bg-white/60 hover:bg-white rounded-3xl active:scale-95 transition-all text-[#8B5E3C]"
+      >
+        <ChevronLeft size={36} />
+      </button>
+      <h2 className="text-3xl font-extrabold text-[#8B5E3C] flex-1 truncate">{t(titleEs, titleQu)}</h2>
+      <AudioButton textEs={titleEs} textQu={titleQu} />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-geo-bg text-geo-text">
+    <div className="min-h-screen font-sans" style={{ backgroundColor: COLORS.bg, color: COLORS.text }}>
       
-      {/* VISTA: SPLASH COMPONENT */}
-      {activeView === 'splash' && (
-        <div className="flex flex-col items-center justify-center my-auto px-4 text-center">
-          <div className="p-4 rounded-full bg-geo-surface shadow-sm border border-geo-border mb-4">
-            <GraduationCap size={64} className="text-geo-primary" />
-          </div>
-          <h1 className="text-3xl font-bold font-sans mb-1">Allillanchu</h1>
-          <p className="text-geo-muted mb-4">Intranet I.E. Coronel Francisco Bolognesi</p>
-          <div className="w-8 h-8 border-4 border-geo-primary border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      )}
+      {/* Background Subtle Andean Pattern */}
+      <div 
+        className="fixed inset-0 pointer-events-none" 
+        style={{ 
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23E8E2D2' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M20,0 L40,0 L40,10 L50,10 L50,20 L60,20 L60,40 L50,40 L50,50 L40,50 L40,60 L20,60 L20,50 L10,50 L10,40 L0,40 L0,20 L10,20 L10,10 L20,10 Z M25,25 L35,25 L35,35 L25,35 Z' /%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundSize: '40px 40px'
+        }}
+      ></div>
 
-      {/* VISTA: LOGIN ADAPTADO ACCESIBLE */}
-      {activeView === 'login' && (
-        <div className="w-full max-w-md my-auto px-4">
-          <div className="bg-geo-surface rounded-2xl p-6 shadow-sm border border-geo-border">
-            <div className="text-center mb-6">
-              <GraduationCap size={44} className="text-geo-primary mx-auto" />
-              <h2 className="text-2xl font-bold mt-2">Yaykuy / Ingresar</h2>
-              <p className="text-sm text-geo-muted">Asistente digital escolar bilingüe</p>
-            </div>
-            
-            <div className="flex flex-col gap-3">
-              <button onClick={() => setActiveView('home')} className="flex items-center justify-between p-4 rounded-xl border border-geo-border bg-geo-bg text-left hover:bg-geo-panel transition-colors cursor-pointer">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-geo-surface rounded-lg border border-geo-border text-geo-accent"><User size={20} /></div>
-                  <div>
-                    <strong className="block text-sm">Alex Quispe Condori</strong>
-                    <span className="text-xs text-geo-muted">Acceso Estudiante</span>
-                  </div>
-                </div>
-                <ArrowRight size={18} className="text-geo-primary" />
-              </button>
-
-              <button onClick={() => setActiveView('home')} className="flex items-center justify-between p-4 rounded-xl border border-geo-border bg-geo-bg text-left hover:bg-geo-panel transition-colors cursor-pointer">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-geo-surface rounded-lg border border-geo-border text-geo-primary"><User size={20} /></div>
-                  <div>
-                    <strong className="block text-sm">Tayta Mama / Apoderado</strong>
-                    <span className="text-xs text-geo-muted">Acceso Asistido para Padres</span>
-                  </div>
-                </div>
-                <ArrowRight size={18} className="text-geo-primary" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONTENEDOR MÓVIL RESPONSIVO (Semana 13) */}
-      {activeView !== 'splash' && activeView !== 'login' && (
-        <div className="w-full max-w-md min-h-screen flex flex-col bg-geo-bg shadow-md border-x border-geo-border">
+      <div className="relative px-6 py-6 pb-32 max-w-2xl mx-auto h-full min-h-screen flex flex-col">
+        <AnimatePresence mode="wait">
           
-          {/* HEADER GENERAL */}
-          <header className="p-4 bg-geo-surface border-b border-geo-border sticky top-0 flex items-center justify-between z-10">
-            {activeView === 'home' ? (
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-geo-bg rounded-full border border-geo-border text-geo-primary"><GraduationCap size={20} /></div>
-                <div>
-                  <h6 className="m-0 font-bold text-sm">{STUDENT_DATA.name}</h6>
-                  <span className="text-xs text-geo-muted block">{STUDENT_DATA.school}</span>
+          {/* 1. SPLASH SCREEN: LANGUAGE SELECTION */}
+          {activeView === 'splash' && (
+            <motion.div key="splash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex-1 flex flex-col items-center justify-center gap-12">
+              <div className="text-center space-y-4">
+                <div className="w-24 h-24 bg-[#C97B63] rounded-full mx-auto flex items-center justify-center mb-6 shadow-lg shadow-[#C97B63]/20">
+                  <MessageCircle size={48} color={COLORS.white} />
                 </div>
+                <h1 className="text-4xl font-extrabold text-[#8B5E3C] leading-tight">
+                  La escuela también<br/>habla tu idioma.
+                </h1>
+                <p className="text-xl text-[#8B5E3C]/70">Yachaywasiqa qallariyniykipim rimapun.</p>
               </div>
-            ) : (
-              <button onClick={() => { stopSpeaking(); setActiveView('home'); }} className="flex items-center text-sm font-semibold text-geo-primary bg-transparent border-0 cursor-pointer">
-                <ChevronLeft size={20} className="mr-1" />
-                <span>Kutiy / Volver</span>
-              </button>
-            )}
 
-            <button 
-              onClick={() => { stopSpeaking(); setActiveView(activeView === 'dashboard' ? 'home' : 'dashboard'); }}
-              className="flex items-center gap-1 text-xs font-bold border px-2 py-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ 
-                backgroundColor: activeView === 'dashboard' ? '#BC4A3C' : '#FFFFFF', 
-                color: activeView === 'dashboard' ? '#FFFFFF' : '#3D2B1F',
-                borderColor: '#E8E2D2'
-              }}
-            >
-              <BarChart3 size={16} />
-              <span>Métricas</span>
-            </button>
-          </header>
-
-          {/* CUERPO DINÁMICO */}
-          <main className="flex-1 p-4">
-            
-            {/* INTRANET GENERAL (HOME) */}
-            {activeView === 'home' && (
-              <div className="flex flex-col gap-4">
-                <div className="bg-geo-surface p-4 rounded-xl border border-geo-border flex items-center justify-between border-l-4 border-l-geo-accent">
-                  <div className="flex items-center gap-3">
-                    <Calendar size={24} className="text-geo-accent" />
-                    <div>
-                      <span className="text-xs text-geo-muted block font-bold">Willaquy / Evento</span>
-                      <strong className="text-sm">{STUDENT_DATA.nextEvent}</strong>
-                    </div>
+              <div className="w-full space-y-6 mt-8">
+                <button 
+                  onClick={() => handleLanguageSelect('qu')}
+                  className="w-full bg-white border-4 border-[#A7C7E7]/30 hover:border-[#A7C7E7] p-8 rounded-[32px] shadow-sm flex items-center justify-between transition-all active:scale-95 group"
+                >
+                  <span className="text-3xl font-bold text-[#8B5E3C]">Rimana Runasimipi</span>
+                  <div className="w-16 h-16 rounded-full bg-[#A7C7E7]/20 flex items-center justify-center group-hover:bg-[#A7C7E7]/40">
+                    <Volume2 size={32} color={COLORS.blue} />
                   </div>
-                  <button onClick={() => speakText(`Próximo evento escolar: ${STUDENT_DATA.nextEvent}`, "Tayta mamakuna yachaywasipi huñunakuy kanqa.", "banner-audio")} className="p-2 rounded-full border bg-geo-bg text-geo-primary border-geo-border cursor-pointer"><Volume2 size={18} /></button>
-                </div>
+                </button>
 
-                <h3 className="text-sm font-bold text-geo-text mt-2">Secciones:</h3>
+                <button 
+                  onClick={() => handleLanguageSelect('es')}
+                  className="w-full bg-white border-4 border-[#C97B63]/20 hover:border-[#C97B63] p-8 rounded-[32px] shadow-sm flex items-center justify-between transition-all active:scale-95 group"
+                >
+                  <span className="text-3xl font-bold text-[#8B5E3C]">Hablar en Español</span>
+                  <div className="w-16 h-16 rounded-full bg-[#C97B63]/10 flex items-center justify-center group-hover:bg-[#C97B63]/30">
+                    <Volume2 size={32} color={COLORS.terracotta} />
+                  </div>
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* 2. LOGIN SCREEN */}
+          {activeView === 'login' && language && (
+            <motion.div key="login" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col justify-center">
+              <Header titleEs="Ingresar" titleQu="Haykuy" onBack={() => setActiveView('splash')} />
+              
+              <div className="bg-white p-8 rounded-[40px] shadow-xl shadow-[#8B5E3C]/5 border-4 border-[#F7F3EE]">
+                <div className="mb-8">
+                  <label className="text-2xl font-bold mb-4 flex items-center justify-between text-[#8B5E3C]">
+                    <span>{t('Tu número de DNI', 'DNI yupayniyki')}</span>
+                    <AudioButton textEs="Por favor, ingresa los 8 números de tu DNI." textQu="DNI yupayniykita qillqakuy uraypi." />
+                  </label>
+                  <input
+                    type="tel"
+                    value={dni}
+                    onChange={e => setDni(e.target.value)}
+                    placeholder="7654..."
+                    className="w-full text-center text-4xl p-8 rounded-[24px] bg-[#F7F3EE]/50 border-4 border-transparent focus:border-[#C97B63] focus:bg-white focus:outline-none transition-all text-[#8B5E3C] font-bold"
+                  />
+                </div>
                 
-                <div className="grid grid-cols-2 gap-3">
-                  <div onClick={() => setActiveView('messages')} className="bg-geo-surface p-4 rounded-xl border border-geo-border text-center cursor-pointer hover:bg-geo-panel transition-colors">
-                    <MessageCircle size={28} className="text-geo-primary mx-auto mb-2" />
-                    <span className="font-bold block text-sm">Willakuykuna</span>
-                    <small className="text-xs text-geo-muted">Mensajes</small>
-                  </div>
+                <button 
+                  onClick={handleLogin}
+                  disabled={dni.length < 8}
+                  className="w-full bg-[#6B8F71] disabled:bg-[#6B8F71]/30 text-white text-3xl font-bold py-8 rounded-[28px] shadow-[0_8px_0_#4e6b52] active:shadow-none active:translate-y-2 transition-all disabled:transform-none disabled:shadow-none flex items-center justify-center gap-4"
+                >
+                  {t('Entrar a la escuela', 'Yachaywasiman haykuy')}
+                </button>
+              </div>
+            </motion.div>
+          )}
 
-                  <div onClick={() => setActiveView('tasks')} className="bg-geo-surface p-4 rounded-xl border border-geo-border text-center cursor-pointer hover:bg-geo-panel transition-colors">
-                    <BookOpen size={28} className="text-geo-accent mx-auto mb-2" />
-                    <span className="font-bold block text-sm">Ruwanakuna</span>
-                    <small className="text-xs text-geo-muted">Tareas</small>
+          {/* 3. HOME DASHBOARD */}
+          {activeView === 'home' && (
+            <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+              <div className="flex items-center justify-between pt-4 pb-2">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-[#C97B63] rounded-full flex items-center justify-center shadow-md">
+                     <User size={32} color={COLORS.white} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-extrabold text-[#8B5E3C]">{STUDENT_DATA.name}</h2>
+                    <p className="text-lg text-[#8B5E3C]/70">{STUDENT_DATA.school}</p>
                   </div>
                 </div>
+                <AudioButton textEs="Estás viendo la información de Alex. Todo marcha bien." textQu="Alexpa yachakuynintam qawachkanki. Allinmi kachkan." />
+              </div>
 
-                <div onClick={() => setActiveView('attendance')} className="bg-geo-surface p-4 rounded-xl border border-geo-border flex items-center justify-between cursor-pointer hover:bg-geo-panel transition-colors">
-                  <div className="flex items-center gap-3">
-                    <Calendar size={28} className="text-amber-600" />
-                    <div>
-                      <span className="font-bold block text-sm">Yachaywasi Chayamuy</span>
-                      <small className="text-xs text-geo-muted">Control de Asistencia</small>
-                    </div>
-                  </div>
-                  <ArrowRight size={20} className="text-geo-muted" />
+              {/* Daily Summary Card */}
+              <div className="bg-[#A7C7E7]/20 border-4 border-[#A7C7E7]/30 p-8 rounded-[40px] flex gap-6 items-center">
+                <button 
+                  onClick={() => isSpeaking ? stopSpeaking() : speakText('Resumen de hoy: Alex asistió a clases. Hay una reunión el 25 de abril.', 'Kunan p\'unchaw: Alexqa hamurqanmi yachaywasiman. Tayta mamakuna huñunakuy 25 p\'unchawta.')}
+                  className={`w-20 h-20 shrink-0 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${isSpeaking ? 'bg-[#C97B63] text-white scale-105' : 'bg-white text-[#A7C7E7]'}`}
+                >
+                  {isSpeaking ? <StopCircle size={40} /> : <PlayCircle size={40} />}
+                </button>
+                <div>
+                  <h3 className="text-xl font-bold mb-2 text-[#8B5E3C]">
+                    {t('Resumen para ti', 'Kunan p\'unchawmanta')}
+                  </h3>
+                  <p className="text-[#8B5E3C]/80 font-medium leading-tight text-lg">
+                    {t('Toca el botón para escuchar cómo le fue a Alex hoy.', 'Ñit\'iy uyarinaykipaq imayna Alex kachkan chayta.')}
+                  </p>
                 </div>
               </div>
-            )}
 
-            {/* SECCIÓN: MENSAJES */}
-            {activeView === 'messages' && (
-              <div className="flex flex-col gap-3">
-                <h4 className="text-base font-bold">Willakuykuna / Mensajes</h4>
-                {MESSAGES.map((msg) => (
-                  <div key={msg.id} className="bg-geo-surface p-4 rounded-xl border border-geo-border flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex justify-between text-xs text-geo-muted mb-1 font-semibold">
-                        <span>{msg.subject}</span>
-                        <span>{msg.date}</span>
+              {/* Main Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={() => setActiveView('chat')}
+                  className="col-span-2 bg-[#C97B63] text-white p-8 rounded-[40px] shadow-[0_8px_0_#a8624d] active:translate-y-2 active:shadow-none transition-all flex items-center gap-6"
+                >
+                  <div className="bg-white/20 p-5 rounded-[24px]">
+                    <MessageCircle size={48} />
+                  </div>
+                  <div className="text-left">
+                    <span className="block text-3xl font-black">{t('Hablar con Rimay', 'Rimaywan parlapay')}</span>
+                    <span className="block text-lg font-medium text-white/80 mt-1">{t('Asistente familiar', 'Yanapaqnikim')}</span>
+                  </div>
+                </button>
+
+                <button onClick={() => setActiveView('messages')} className="bg-white p-6 rounded-[32px] border-4 border-[#F7F3EE] shadow-sm flex flex-col items-center gap-4 active:scale-95 transition-transform text-[#8B5E3C]">
+                  <div className="w-20 h-20 bg-[#A7C7E7]/20 rounded-full flex items-center justify-center text-[#5c8db9]">
+                    <Info size={40} />
+                  </div>
+                  <span className="text-2xl font-bold text-center">{t('Avisos', 'Willakuykuna')}</span>
+                </button>
+
+                <button onClick={() => setActiveView('attendance')} className="bg-white p-6 rounded-[32px] border-4 border-[#F7F3EE] shadow-sm flex flex-col items-center gap-4 active:scale-95 transition-transform text-[#8B5E3C]">
+                  <div className="w-20 h-20 bg-[#6B8F71]/20 rounded-full flex items-center justify-center text-[#4e6b52]">
+                    <CheckCircle size={40} />
+                  </div>
+                  <span className="text-2xl font-bold text-center">{t('Asistencia', 'Hamuy')}</span>
+                </button>
+
+                <button onClick={() => setActiveView('tasks')} className="bg-white p-6 rounded-[32px] border-4 border-[#F7F3EE] shadow-sm flex flex-col items-center gap-4 active:scale-95 transition-transform text-[#8B5E3C]">
+                  <div className="w-20 h-20 bg-[#C97B63]/10 rounded-full flex items-center justify-center text-[#C97B63]">
+                    <BookOpen size={40} />
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-2xl font-bold text-center leading-none">{t('Tareas', 'Rurana')}</span>
+                    <span className="mt-2 text-sm font-bold bg-[#C97B63]/10 text-[#C97B63] px-3 py-1 rounded-full">2 {t('pendientes', 'rurana')}</span>
+                  </div>
+                </button>
+
+                <button onClick={() => setActiveView('calendar')} className="bg-white p-6 rounded-[32px] border-4 border-[#F7F3EE] shadow-sm flex flex-col items-center gap-4 active:scale-95 transition-transform text-[#8B5E3C]">
+                  <div className="w-20 h-20 bg-[#e0aa53]/20 rounded-full flex items-center justify-center text-[#b88636]">
+                    <Calendar size={40} />
+                  </div>
+                  <span className="text-2xl font-bold text-center leading-none">{t('Calendario', 'P\'unchaw qillqa')}</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* 4. MESSAGES / AVISOS */}
+          {activeView === 'messages' && (
+            <motion.div key="messages" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+              <Header titleEs="Avisos importantes" titleQu="Willakuykuna" onBack={() => setActiveView('home')} />
+              <div className="space-y-4">
+                {MESSAGES.map(msg => (
+                  <div key={msg.id} className="bg-white p-6 rounded-[32px] shadow-sm border-2 border-[#F7F3EE] flex flex-col gap-4">
+                    <div className="flex gap-5 items-start">
+                      <AudioButton textEs={msg.es} textQu={msg.qu} className="mt-1 flex-shrink-0" />
+                      <div className="flex-1">
+                        <span className="text-[#C97B63] font-bold text-sm uppercase tracking-widest">{msg.date}</span>
+                        <p className="text-[#8B5E3C] text-xl font-medium mt-2 leading-snug">{t(msg.es, msg.qu)}</p>
                       </div>
-                      <p className="text-sm font-bold mb-1">{msg.es}</p>
-                      <p className="text-xs text-geo-muted italic">{msg.qu}</p>
                     </div>
-                    <button onClick={() => speakText(msg.es, msg.qu, `msg-${msg.id}`)} className="p-2 rounded-full border bg-geo-bg text-geo-primary border-geo-border cursor-pointer mt-4"><Volume2 size={16} /></button>
+                    
+                    <div className="flex justify-end border-t border-[#F7F3EE]/60 pt-4 mt-1">
+                      <button 
+                        onClick={() => handleShare(msg)}
+                        className="px-6 py-3 rounded-2xl font-bold flex items-center gap-2 text-md transition-all active:scale-95 shadow-sm text-white"
+                        style={{ backgroundColor: COLORS.terracotta }}
+                      >
+                        {copiedId === msg.id ? (
+                          <>
+                            <CheckCircle size={20} />
+                            <span>{t('¡Copiado!', 'Hap\'isqa!')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Share2 size={20} />
+                            <span>{t('Compartir', 'Willanakuy')}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {/* SECCIÓN: TAREAS */}
-            {activeView === 'tasks' && (
-              <div className="flex flex-col gap-3">
-                <h4 className="text-base font-bold">Ruwanakuna / Tareas</h4>
-                {TASKS.map((task) => (
-                  <div key={task.id} className="bg-geo-surface p-4 rounded-xl border border-geo-border flex flex-col gap-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold bg-geo-panel px-2 py-0.5 rounded border border-geo-border">{task.subject}</span>
-                      <span className="text-xs text-geo-muted flex items-center gap-1"><Clock size={12} /> {task.due}</span>
+          {/* 5. ATTENDANCE */}
+          {activeView === 'attendance' && (
+            <motion.div key="attendance" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+              <Header titleEs="Asistencia" titleQu="Hamuykuna" onBack={() => setActiveView('home')} />
+              <div className="space-y-4">
+                {ATTENDANCE.map((rec, i) => (
+                  <div key={i} className="bg-white p-6 rounded-[32px] shadow-sm border-2 border-[#F7F3EE] flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                       <div className={`p-4 rounded-full ${rec.status==='present' ? 'bg-[#6B8F71]/20 text-[#4e6b52]' : 'bg-[#C97B63]/20 text-[#a8624d]'}`}>
+                         {rec.status==='present' ? <CheckCircle size={36} /> : <AlertCircle size={36} />}
+                       </div>
+                       <div>
+                         <p className="text-xl font-extrabold text-[#8B5E3C]">{t(rec.es, rec.qu)}</p>
+                         <p className="text-lg text-[#8B5E3C]/60 font-medium">{rec.date}</p>
+                       </div>
                     </div>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-bold mb-0.5">{task.es}</p>
-                        <p className="text-xs text-geo-muted">{task.qu}</p>
+                    <AudioButton textEs={`El ${rec.date}, el alumno ${rec.es}`} textQu={`${rec.date} p'unchawta, ruraqmi ${rec.qu}`} />
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* 6. TASKS */}
+          {activeView === 'tasks' && (
+            <motion.div key="tasks" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+              <Header titleEs="Tareas" titleQu="Ruranakuna" onBack={() => setActiveView('home')} />
+              <div className="space-y-4">
+                {TASKS.map(task => (
+                  <div key={task.id} className="bg-white p-6 rounded-[32px] shadow-sm border-2 border-[#F7F3EE]">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="bg-[#A7C7E7]/30 text-[#4f789e] text-sm font-bold px-4 py-2 rounded-xl">{task.subject}</span>
+                      <span className="text-lg font-bold text-[#C97B63]">{t('Para el', 'Yaku')} {task.due}</span>
+                    </div>
+                    <div className="flex gap-5 items-start">
+                      <AudioButton textEs={task.es} textQu={task.qu} />
+                      <p className="text-[#8B5E3C] text-xl font-medium leading-snug mt-1">{t(task.es, task.qu)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* 7. AI ASSISTANT CHAT */}
+          {activeView === 'chat' && (
+            <motion.div key="chat" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="fixed inset-0 z-50 bg-[#F7F3EE] flex flex-col">
+              <div className="flex items-center justify-between p-6 bg-white/50 backdrop-blur-md sticky top-0 z-10 border-b border-[#8B5E3C]/5">
+                <button onClick={() => { setActiveView('home'); stopRecording(); stopSpeaking(); }} className="p-4 bg-white hover:bg-gray-50 rounded-3xl active:scale-95 border-2 border-[#F7F3EE] text-[#8B5E3C]">
+                  <ChevronLeft size={36} />
+                </button>
+                <div className="flex flex-col items-center">
+                  <h3 className="text-3xl font-extrabold text-[#C97B63]">Rimay</h3>
+                  <span className="text-sm font-medium text-[#8B5E3C]/60">{t('En línea', 'Llamk\'achkan')}</span>
+                </div>
+                <div className="w-16"></div> {/* Spacer balance */}
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex items-end gap-3 max-w-[90%]">
+                  <div className="w-12 h-12 rounded-full bg-[#C97B63] flex items-center justify-center shrink-0 shadow-md">
+                    <MessageCircle size={24} color={COLORS.white} />
+                  </div>
+                  <div className="bg-white p-6 rounded-[32px] rounded-bl-lg border-2 border-[#F7F3EE] shadow-sm relative">
+                    <p className="text-xl font-medium text-[#8B5E3C]">{t('Hola. Toca el botón de abajo para preguntarme algo sobre Alex.', 'Allinllachu. Ñit\'iy botonta Alexmanta tapuwanaykipaq.')}</p>
+                    <div className="absolute -right-2 -bottom-2">
+                       <AudioButton textEs="Hola. Toca el gran botón de abajo para preguntarme algo sobre Alex." textQu="Allinllachu. Ñit\'iy botonta Alexmanta tapuwanaykipaq." className="w-12 h-12 p-2" />
+                    </div>
+                  </div>
+                </div>
+
+                {chatMessages.map((msg, i) => (
+                  <div key={i} className={`flex items-end gap-3 max-w-[90%] ${msg.sender === 'user' ? 'ml-auto flex-row-reverse' : ''}`}>
+                    {msg.sender === 'ai' && (
+                      <div className="w-14 h-14 rounded-full bg-[#C97B63] shrink-0 flex items-center justify-center shadow-md">
+                         <MessageCircle size={28} color={COLORS.white} />
                       </div>
-                      <button onClick={() => speakText(task.es, task.qu, `tsk-${task.id}`)} className="p-2 rounded-full border bg-geo-bg text-geo-primary border-geo-border cursor-pointer"><Volume2 size={16} /></button>
-                    </div>
-                    <div className="pt-2 border-t border-geo-border flex justify-between items-center text-xs">
-                      <span className="text-geo-muted">Cumplimiento:</span>
-                      {task.status === 'completed' ? (
-                        <span className="text-geo-accent font-bold flex items-center gap-1"><CheckCircle size={14} /> Entregado</span>
-                      ) : (
-                        <span className="text-amber-600 font-bold flex items-center gap-1"><Clock size={14} /> Pendiente</span>
+                    )}
+                    <div className={`p-6 rounded-[32px] ${msg.sender === 'user' ? 'bg-[#8B5E3C] text-[#F7F3EE] rounded-br-lg' : 'bg-white text-[#8B5E3C] border-2 border-[#F7F3EE] rounded-bl-lg'} shadow-sm relative`}>
+                      <p className="text-xl font-medium leading-snug">
+                        {msg.text}
+                        {msg.id === 'temp' && <Loader2 className="inline ml-3 animate-spin" size={24} />}
+                      </p>
+                      {msg.sender === 'ai' && msg.id !== 'temp' && (
+                         <div className="absolute -right-2 -bottom-2">
+                            <AudioButton textEs={msg.text} className="w-12 h-12 p-2 shadow-md" />
+                         </div>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
-            )}
 
-            {/* SECCIÓN: ASISTENCIA */}
-            {activeView === 'attendance' && (
-              <div className="flex flex-col gap-3">
-                <h4 className="text-base font-bold">Chayamuy / Asistencia</h4>
-                <div className="bg-geo-surface rounded-xl border border-geo-border p-3">
-                  {ATTENDANCE.map((att, idx) => (
-                    <div key={idx} className="flex items-center justify-between py-2.5 border-b border-geo-border last:border-0">
-                      <div>
-                        <strong className="text-sm block">{att.day}</strong>
-                        <span className="text-xs text-geo-muted">{att.es}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs px-2 py-0.5 rounded font-semibold ${
-                          att.status === 'Asistió' ? 'bg-green-50 text-green-700' :
-                          att.status === 'Tardanza' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
-                        }`}>{att.status}</span>
-                        <button onClick={() => speakText(`Día ${att.day}: ${att.es}`, att.qu, `att-${idx}`)} className="p-1.5 rounded-full bg-geo-bg border border-geo-border text-geo-primary cursor-pointer"><Volume2 size={14} /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {/* Big Voice Button Area or Text Fallback */}
+              <div className="p-8 bg-white border-t-2 border-[#F7F3EE] flex flex-col items-center justify-center pb-12 rounded-t-[40px] shadow-[0_-10px_40px_rgba(139,94,60,0.05)]">
+                {micError ? (
+                  <div className="w-full">
+                    <p className="text-center text-[#C97B63] font-bold mb-4">{t('No pudimos detectar tu micrófono. Por favor, escribe tu consulta.', 'Micrófono mana allinchu. Qillqay uraypi.')}</p>
+                    <form onSubmit={processTextInput} className="flex gap-3">
+                      <input 
+                        type="text" 
+                        value={textInput} 
+                        onChange={e => setTextInput(e.target.value)} 
+                        placeholder={t('Escribe tu mensaje...', 'Qillqay...')}
+                        className="flex-1 bg-[#F7F3EE] text-[#8B5E3C] p-6 rounded-[24px] border-2 border-transparent focus:border-[#C97B63] focus:outline-none text-xl"
+                      />
+                      <button 
+                        type="submit" 
+                        disabled={!textInput.trim() || isProcessingVoice}
+                        className="bg-[#C97B63] disabled:bg-[#C97B63]/50 text-white p-6 rounded-[24px] shadow-[0_6px_0_#a8624d] active:shadow-none active:translate-y-1 transition-all"
+                      >
+                        <MessageCircle size={32} />
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <button
+                    onPointerDown={startRecording}
+                    onPointerUp={stopRecording}
+                    onPointerLeave={stopRecording}
+                    className={`w-36 h-36 rounded-[40px] flex flex-col items-center justify-center gap-3 transition-all transform active:scale-95 select-none touch-none ${
+                        isRecording 
+                        ? 'bg-[#C97B63] scale-110 shadow-[0_0_40px_rgba(201,123,99,0.4)]' 
+                        : 'bg-[#C97B63] shadow-[0_12px_0_#a8624d]'
+                    } text-white`}
+                  >
+                    {isRecording ? <Square size={56} fill="currentColor" /> : <Mic size={56} />}
+                    <span className="text-lg font-bold uppercase tracking-widest">{isRecording ? t('Escuchando', 'Uyarispa') : t('Mantener', 'Ñitiy')}</span>
+                  </button>
+                )}
               </div>
-            )}
-
-            {/* SECCIÓN: DASHBOARD DOCENTE ODS 10 (Semana 12) */}
-            {activeView === 'dashboard' && (
-              <div className="flex flex-col gap-4 pb-6">
-                <div className="bg-geo-surface p-3 rounded-xl border border-geo-border text-center">
-                  <h4 className="text-sm font-bold text-geo-primary m-0">Inclusión Digital Educativa (ODS 10)</h4>
-                  <p className="text-xs text-geo-muted m-0 mt-0.5">Analíticas del soporte bilingüe de voz</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-geo-surface p-3 rounded-xl border border-geo-border">
-                    <span className="text-xs text-geo-muted block">Uso del Quechua</span>
-                    <strong className="text-xl text-geo-accent block mt-1">+84%</strong>
-                    <span className="text-[10px] text-gray-400">Preferencia familiar</span>
-                  </div>
-                  <div className="bg-geo-surface p-3 rounded-xl border border-geo-border">
-                    <span className="text-xs text-geo-muted block">Cumplimiento</span>
-                    <strong className="text-xl text-geo-primary block mt-1">92%</strong>
-                    <span className="text-[10px] text-gray-400">Tareas a tiempo</span>
-                  </div>
-                </div>
-
-                <div className="bg-geo-surface p-3 rounded-xl border border-geo-border">
-                  <h5 className="text-xs font-bold mb-3 text-gray-700">Demanda de Audio por Sección</h5>
-                  <div className="w-full h-44">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={METRICS_VOICE} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Legend wrapperStyle={{ fontSize: 11 }} />
-                        <Bar dataKey="Español" fill="#BC4A3C" radius={[3, 3, 0, 0]} />
-                        <Bar dataKey="Quechua" fill="#708238" radius={[3, 3, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div className="bg-geo-surface p-3 rounded-xl border border-geo-border">
-                  <h5 className="text-xs font-bold mb-2 text-gray-700">Evolución del Rendimiento Escolar</h5>
-                  <div className="w-full h-36">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={METRICS_PROGRESS} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                        <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="porcentaje" stroke="#708238" fill="#F0F4EC" strokeWidth={2} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            )}
-          </main>
-
-          {/* MENÚ ACCESIBLE FIJO INFERIOR */}
-          {activeView !== 'dashboard' && (
-            <footer className="bg-geo-surface border-t border-geo-border p-3 sticky bottom-0 flex justify-center z-10">
-              <div className="flex items-center bg-geo-bg px-3 py-1.5 rounded-full border border-geo-border w-full max-w-xs shadow-sm">
-                <button 
-                  onClick={toggleRecording} 
-                  className={`p-3 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
-                    isRecording ? 'bg-red-600 text-white border-red-600 animate-pulse' : 'bg-geo-surface text-geo-accent border-geo-border'
-                  }`}
-                >
-                  {isRecording ? <Square size={20} /> : <Mic size={20} />}
-                </button>
-                <div className="ml-3 text-left">
-                  <strong className="text-xs block text-gray-900">{isRecording ? 'Grabando audio...' : 'Rimayta Atinki / Enviar Voz'}</strong>
-                  <span className="text-[11px] text-geo-muted block">{isRecording ? 'Procesando mensaje...' : 'Responde comunicados por voz'}</span>
-                </div>
-              </div>
-            </footer>
+            </motion.div>
           )}
-        </div>
-      )}
+
+          {/* 8. CALENDAR */}
+          {activeView === 'calendar' && (
+            <motion.div key="calendar" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+              <Header titleEs="Calendario" titleQu="P'unchaw qillqa" onBack={() => { setActiveView('home'); setSelectedCalendarDate(null); }} />
+              
+              <div className="bg-white p-6 rounded-[32px] shadow-sm border-2 border-[#F7F3EE]">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold text-[#8B5E3C]">Abril 2026</h3>
+                </div>
+                
+                <div className="grid grid-cols-7 gap-2 text-center mb-4 text-[#8B5E3C]/60 font-bold text-sm">
+                  <div>Do</div><div>Lu</div><div>Ma</div><div>Mi</div><div>Ju</div><div>Vi</div><div>Sa</div>
+                </div>
+                
+                <div className="grid grid-cols-7 gap-2">
+                  <div className="aspect-square p-2 border-2 border-transparent"></div>
+                  <div className="aspect-square p-2 border-2 border-transparent"></div>
+                  <div className="aspect-square p-2 border-2 border-transparent"></div>
+                  {Array.from({length: 30}, (_, i) => i + 1).map(day => {
+                    const dateStr = `${day} Abril`;
+                    const hasMessage = MESSAGES.some(m => m.date.includes(`${day} Abril`) || m.date.includes(`0${day} Abril`));
+                    const hasTask = TASKS.some(t => t.due.includes(`${day} Abril`) || t.due.includes(`0${day} Abril`));
+                    const isSelected = selectedCalendarDate === dateStr;
+                    
+                    return (
+                      <button 
+                        key={day}
+                        onClick={() => setSelectedCalendarDate(dateStr)}
+                        className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all active:scale-95 border-2 ${
+                          isSelected ? 'bg-[#8B5E3C] text-white border-[#8B5E3C] shadow-md' : 'bg-gray-50 text-[#8B5E3C] hover:bg-gray-100 border-[#F7F3EE]'
+                        } ${(!isSelected && (hasMessage || hasTask)) ? '!border-[#C97B63]/40 bg-[#C97B63]/5' : ''}`}
+                      >
+                        <span className="text-lg font-bold leading-none">{day}</span>
+                        <div className="absolute bottom-1.5 flex gap-1">
+                          {hasMessage && <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#A7C7E7]'}`}></div>}
+                          {hasTask && <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-[#C97B63]' : 'bg-[#C97B63]'}`}></div>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {selectedCalendarDate && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 space-y-4 pb-12">
+                  <h4 className="text-xl font-bold text-[#8B5E3C] px-2">{selectedCalendarDate}</h4>
+                  
+                  {(() => {
+                    const dateMessages = MESSAGES.filter(m => m.date.includes(selectedCalendarDate));
+                    const dateTasks = TASKS.filter(t => t.due.includes(selectedCalendarDate));
+                    
+                    if (dateMessages.length === 0 && dateTasks.length === 0) {
+                      return (
+                         <div className="bg-white/60 p-6 rounded-[32px] text-center border-2 border-[#F7F3EE]">
+                           <p className="text-[#8B5E3C]/60 text-lg font-medium">{t('No hay actividades programadas.', 'Manam ruranakuna kanchu.')}</p>
+                         </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="space-y-4">
+                        {dateMessages.map(msg => (
+                          <div key={`msg-${msg.id}`} className="bg-white p-6 rounded-[32px] border-4 border-[#A7C7E7]/30 flex gap-5 items-start">
+                            <div className="w-14 h-14 bg-[#A7C7E7]/20 rounded-full flex items-center justify-center text-[#5c8db9] shrink-0">
+                               <Info size={28} />
+                            </div>
+                            <div>
+                               <span className="text-sm font-bold text-[#5c8db9] uppercase mb-1 block tracking-wider">{t('Aviso', 'Willakuy')}</span>
+                               <p className="text-[#8B5E3C] font-bold text-lg leading-snug">{t(msg.es, msg.qu)}</p>
+                            </div>
+                          </div>
+                        ))}
+                        {dateTasks.map(task => (
+                          <div key={`task-${task.id}`} className="bg-white p-6 rounded-[32px] border-4 border-[#C97B63]/30 flex gap-5 items-start">
+                            <div className="w-14 h-14 bg-[#C97B63]/20 rounded-full flex items-center justify-center text-[#C97B63] shrink-0">
+                               <BookOpen size={28} />
+                            </div>
+                            <div>
+                               <span className="text-sm font-bold text-[#C97B63] uppercase mb-1 block tracking-wider">{task.subject}</span>
+                               <p className="text-[#8B5E3C] font-bold text-lg leading-snug">{t(task.es, task.qu)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
