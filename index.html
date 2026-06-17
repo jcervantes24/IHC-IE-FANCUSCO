@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Rimay - Asistente Escolar</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+  
+  <!-- Feather Icons (Lucide fallback via Feather for Vanilla JS) -->
+  <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body>
+
+  <!-- Background Pattern -->
+  <div class="bg-pattern"></div>
+
+  <main class="app-container">
+
+    <!-- 1. SPLASH SCREEN -->
+    <section id="splash-view" class="view active d-flex flex-column justify-content-center align-items-center h-100 gap-5 fade-in">
+      <div class="text-center w-100">
+        <div class="icon-circle terracotta shadow-lg mx-auto mb-4 d-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+          <i data-feather="message-circle" class="text-white" style="width: 48px; height: 48px;"></i>
+        </div>
+        <h1 class="text-brown fw-black mb-3">La escuela también<br>habla tu idioma.</h1>
+        <p class="text-brown opacity-75 fs-4">Yachaywasiqa qallariyniykipim rimapun.</p>
+      </div>
+
+      <div class="w-100 mt-4 d-flex flex-column gap-3 px-3">
+        <button class="btn-lang border-blue" onclick="app.selectLanguage('qu')">
+          <span class="text-brown fw-bold fs-3">Rimana Runasimipi</span>
+          <div class="icon-sm blue-bg">
+            <i data-feather="volume-2" class="text-blue"></i>
+          </div>
+        </button>
+
+        <button class="btn-lang border-terracotta" onclick="app.selectLanguage('es')">
+          <span class="text-brown fw-bold fs-3">Hablar en Español</span>
+          <div class="icon-sm terracotta-bg">
+            <i data-feather="volume-2" class="text-terracotta"></i>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- 2. LOGIN SCREEN -->
+    <section id="login-view" class="view d-flex flex-column justify-content-center h-100">
+      <header class="header mb-5 px-3">
+        <button class="btn-back" onclick="app.navigate('splash')">
+          <i data-feather="chevron-left"></i>
+        </button>
+        <h2 class="title" data-es="Ingresar" data-qu="Haykuy">Ingresar</h2>
+        <button class="btn-audio" onclick="app.speak('Por favor, ingresa los 8 números de tu DNI.', 'DNI yupayniykita qillqakuy uraypi.')">
+          <i data-feather="volume-2"></i>
+        </button>
+      </header>
+      
+      <div class="card-login mx-3 p-4">
+        <div class="mb-5">
+          <label class="d-flex justify-content-between align-items-center w-100 mb-3 text-brown fw-bold fs-4">
+            <span data-es="Tu número de DNI" data-qu="DNI yupayniyki">Tu número de DNI</span>
+          </label>
+          <input type="tel" id="dni-input" class="form-control dni-input text-center fw-bold text-brown" placeholder="7654..." maxlength="8" oninput="app.checkDniLength()">
+        </div>
+        
+        <button id="btn-login" class="btn-main green disabled w-100 fw-bold fs-3" disabled onclick="app.login()">
+          <span data-es="Entrar a la escuela" data-qu="Yachaywasiman haykuy">Entrar a la escuela</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. HOME DASHBOARD -->
+    <section id="home-view" class="view h-100 d-flex flex-column fade-in">
+      <div class="d-flex align-items-center justify-content-between mb-4 mt-3 px-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="icon-circle terracotta">
+            <i data-feather="user" class="text-white" style="width:32px; height:32px;"></i>
+          </div>
+          <div>
+            <h2 class="text-brown fw-black mb-0 fs-3" id="student-name">Alex Quispe Condori</h2>
+            <p class="text-brown opacity-75 mb-0" id="student-school">I.E. Coronel Francisco Bolognesi</p>
+          </div>
+        </div>
+        <button class="btn-audio" onclick="app.speak('Estás viendo la información de Alex. Todo marcha bien.', 'Alexpa yachakuynintam qawachkanki. Allinmi kachkan.')">
+          <i data-feather="volume-2"></i>
+        </button>
+      </div>
+
+      <!-- Daily Summary -->
+      <div class="summary-card mx-3 mb-4 d-flex align-items-center gap-3">
+        <button class="btn-play bg-white text-blue" onclick="app.playSummary(this)">
+          <i data-feather="play-circle" style="width: 40px; height: 40px;"></i>
+        </button>
+        <div>
+          <h3 class="text-brown fw-bold fs-4 mb-1" data-es="Resumen para ti" data-qu="Kunan p'unchawmanta">Resumen para ti</h3>
+          <p class="text-brown opacity-75 fw-medium mb-0 lh-sm" data-es="Toca el botón para escuchar cómo le fue a Alex hoy." data-qu="Ñit'iy uyarinaykipaq imayna Alex kachkan chayta.">Toca el botón para escuchar cómo le fue a Alex hoy.</p>
+        </div>
+      </div>
+
+      <!-- Main Grid -->
+      <div class="row g-3 px-3 pb-5 mb-5">
+        <div class="col-12">
+          <button class="btn-assistant w-100 d-flex align-items-center gap-3" onclick="app.navigate('chat')">
+            <div class="icon-box">
+              <i data-feather="message-circle" class="text-white" style="width: 48px; height: 48px;"></i>
+            </div>
+            <div class="text-start">
+              <span class="d-block text-white fw-black fs-2 lh-1 mb-1" data-es="Hablar con Rimay" data-qu="Rimaywan parlapay">Hablar con Rimay</span>
+              <span class="d-block text-white opacity-75 fw-medium fs-5" data-es="Asistente familiar" data-qu="Yanapaqnikim">Asistente familiar</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="col-6">
+          <button class="btn-grid w-100" onclick="app.navigate('messages')">
+            <div class="icon-circle blue-bg text-blue mb-2" style="width: 80px; height: 80px;">
+              <i data-feather="info" style="width:40px; height:40px;"></i>
+            </div>
+            <span class="text-brown fw-bold fs-4" data-es="Avisos" data-qu="Willakuykuna">Avisos</span>
+          </button>
+        </div>
+
+        <div class="col-6">
+          <button class="btn-grid w-100" onclick="app.navigate('attendance')">
+            <div class="icon-circle green-bg text-green mb-2" style="width: 80px; height: 80px;">
+              <i data-feather="check-circle" style="width:40px; height:40px;"></i>
+            </div>
+            <span class="text-brown fw-bold fs-4" data-es="Asistencia" data-qu="Hamuy">Asistencia</span>
+          </button>
+        </div>
+
+        <div class="col-6">
+          <button class="btn-grid w-100" onclick="app.navigate('tasks')">
+            <div class="icon-circle terracotta-bg text-terracotta mb-2" style="width: 80px; height: 80px;">
+              <i data-feather="book-open" style="width:40px; height:40px;"></i>
+            </div>
+            <span class="text-brown fw-bold fs-4 mb-1" data-es="Tareas" data-qu="Rurana">Tareas</span>
+            <span class="badge-custom terracotta" data-es="2 pendientes" data-qu="2 rurana">2 pendientes</span>
+          </button>
+        </div>
+
+        <div class="col-6">
+          <button class="btn-grid w-100" onclick="app.navigate('calendar')">
+            <div class="icon-circle yellow-bg text-yellow mb-2" style="width: 80px; height: 80px;">
+              <i data-feather="calendar" style="width:40px; height:40px;"></i>
+            </div>
+            <span class="text-brown fw-bold fs-4" data-es="Calendario" data-qu="P'unchaw qillqa">Calendario</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. MESSAGES / AVISOS -->
+    <section id="messages-view" class="view h-100 d-flex flex-column px-3">
+      <header class="header mt-4 mb-4">
+        <button class="btn-back" onclick="app.navigate('home')">
+          <i data-feather="chevron-left"></i>
+        </button>
+        <h2 class="title text-truncate" data-es="Avisos importantes" data-qu="Willakuykuna">Avisos importantes</h2>
+        <button class="btn-audio" onclick="app.speak('Avisos importantes', 'Willakuykuna')">
+          <i data-feather="volume-2"></i>
+        </button>
+      </header>
+
+      <div class="list-container pb-5" id="messages-list">
+        <!-- Generado por JS -->
+      </div>
+    </section>
+
+    <!-- 5. ATTENDANCE -->
+    <section id="attendance-view" class="view h-100 d-flex flex-column px-3">
+      <header class="header mt-4 mb-4">
+        <button class="btn-back" onclick="app.navigate('home')">
+          <i data-feather="chevron-left"></i>
+        </button>
+        <h2 class="title" data-es="Asistencia" data-qu="Hamuykuna">Asistencia</h2>
+        <button class="btn-audio" onclick="app.speak('Asistencia', 'Hamuykuna')">
+          <i data-feather="volume-2"></i>
+        </button>
+      </header>
+
+      <div class="list-container pb-5" id="attendance-list">
+        <!-- Generado por JS -->
+      </div>
+    </section>
+
+    <!-- 6. TASKS -->
+    <section id="tasks-view" class="view h-100 d-flex flex-column px-3">
+      <header class="header mt-4 mb-4">
+        <button class="btn-back" onclick="app.navigate('home')">
+          <i data-feather="chevron-left"></i>
+        </button>
+        <h2 class="title" data-es="Tareas" data-qu="Ruranakuna">Tareas</h2>
+        <button class="btn-audio" onclick="app.speak('Tareas', 'Ruranakuna')">
+          <i data-feather="volume-2"></i>
+        </button>
+      </header>
+
+      <div class="list-container pb-5" id="tasks-list">
+        <!-- Generado por JS -->
+      </div>
+    </section>
+
+    <!-- 7. AI ASSISTANT CHAT -->
+    <section id="chat-view" class="view chat-view h-100 d-flex flex-column">
+      <div class="chat-header px-3 py-3 d-flex justify-content-between align-items-center">
+        <button class="btn-back bg-white border" onclick="app.navigate('home')">
+          <i data-feather="chevron-left"></i>
+        </button>
+        <div class="text-center">
+          <h3 class="text-terracotta fw-black fs-2 mb-0">Rimay</h3>
+          <span class="text-brown opacity-75 fw-medium small" data-es="En línea" data-qu="Llamk'achkan">En línea</span>
+        </div>
+        <div style="width: 50px;"></div>
+      </div>
+
+      <div class="chat-messages flex-grow-1 p-3 overflow-auto" id="chat-messages-container">
+        <!-- Mensaje de bienvenida inicial -->
+        <div class="chat-msg ai d-flex gap-2 mb-4">
+          <div class="chat-avatar terracotta shadow-sm">
+            <i data-feather="message-circle" class="text-white"></i>
+          </div>
+          <div class="chat-bubble ai-bubble position-relative">
+            <p class="text-brown fw-medium fs-5 mb-0" data-es="Hola. Toca el gran botón de abajo para preguntarme algo sobre Alex." data-qu="Allinllachu. Ñit'iy botonta Alexmanta tapuwanaykipaq.">Hola. Toca el gran botón de abajo para preguntarme algo sobre Alex.</p>
+            <button class="btn-audio mini shadow-sm" onclick="app.speak('Hola. Toca el gran botón de abajo para preguntarme algo sobre Alex.', 'Allinllachu. Ñit\'iy botonta Alexmanta tapuwanaykipaq.')">
+              <i data-feather="volume-2"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-controls p-4 text-center shadow-lg bg-white rounded-top-5">
+        <div id="mic-controls">
+          <button class="btn-mic shadow-terracotta terracotta mb-2" id="btn-mic">
+            <i data-feather="mic" style="width:48px; height:48px;"></i>
+            <span class="fw-bold text-uppercase tracking-wide mt-2 fs-5" id="mic-status" data-es="Mantener" data-qu="Ñitiy">Mantener</span>
+          </button>
+        </div>
+        
+        <div id="text-controls" class="d-none text-start w-100">
+          <p class="text-center text-terracotta fw-bold mb-3" data-es="No pudimos detectar tu micrófono. Por favor, escribe tu consulta." data-qu="Micrófono mana allinchu. Qillqay uraypi.">No pudimos detectar tu micrófono. Por favor, escribe tu consulta.</p>
+          <form class="d-flex gap-2" onsubmit="app.processTextForm(event)">
+            <input type="text" id="chat-input" class="form-control chat-input" placeholder="Escribe tu mensaje..." autocomplete="off">
+            <button type="submit" class="btn-send terracotta shadow-terracotta" id="btn-send">
+              <i data-feather="send"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. CALENDAR -->
+    <section id="calendar-view" class="view h-100 d-flex flex-column px-3">
+      <header class="header mt-4 mb-4">
+        <button class="btn-back" onclick="app.navigate('home')">
+          <i data-feather="chevron-left"></i>
+        </button>
+        <h2 class="title" data-es="Calendario" data-qu="P'unchaw qillqa">Calendario</h2>
+        <button class="btn-audio" onclick="app.speak('Calendario', 'P\'unchaw qillqa')">
+          <i data-feather="volume-2"></i>
+        </button>
+      </header>
+
+      <div class="calendar-card p-4">
+        <h3 class="text-brown fw-bold fs-3 mb-4">Abril 2026</h3>
+        
+        <div class="calendar-grid text-brown opacity-50 fw-bold small text-center mb-2">
+          <div>Do</div><div>Lu</div><div>Ma</div><div>Mi</div><div>Ju</div><div>Vi</div><div>Sa</div>
+        </div>
+        
+        <div class="calendar-grid" id="calendar-days">
+          <!-- Generado por JS -->
+        </div>
+      </div>
+
+      <div id="calendar-details" class="mt-4 mb-5">
+        <!-- Detalles del día seleccionado -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/script.js"></script>
+  <script>
+    feather.replace();
+  </script>
+</body>
+</html>
