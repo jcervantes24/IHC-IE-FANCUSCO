@@ -9,10 +9,6 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   Legend, ResponsiveContainer, AreaChart, Area 
 } from 'recharts';
-
-// ==========================================
-// ESTRUCTURA DE DATOS BILINGÜES (IHC - ODS 10)
-// ==========================================
 const STUDENT_DATA = { 
   name: "Alex Quispe Condori", 
   school: "I.E. Coronel Francisco Bolognesi", 
@@ -36,8 +32,6 @@ const ATTENDANCE = [
   { day: 'Jueves', status: 'Asistió', es: 'Asistencia normal.', qu: 'Allin chayamurqan.' },
   { day: 'Viernes', status: 'Falta', es: 'Falta injustificada.', qu: 'Manam chayamurqanchu.' }
 ];
-
-// Datos Simulados del Dashboard de Inclusión y Usabilidad (Semana 12)
 const VOICE_USAGE_DATA = [
   { name: 'Mensajes', Español: 45, Quechua: 120 },
   { name: 'Tareas', Español: 30, Quechua: 95 },
@@ -69,12 +63,9 @@ export default function App() {
     }
   }, [activeView]);
 
-  // ==========================================
-  // LÓGICA DE JAVASCRIPT: WEB SPEECH API (Semana 11)
-  // ==========================================
   const speakText = (textEs: string, textQu: string, id: string) => {
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // Detener audios previos
+      window.speechSynthesis.cancel(); 
       
       if (isSpeaking && activeAudioId === id) {
         window.speechSynthesis.cancel();
@@ -82,36 +73,28 @@ export default function App() {
         setActiveAudioId(null);
         return;
       }
-
-      // Combinamos la lectura: Primero anuncia la traducción contextual o frase adaptada
       const phraseToSpeak = `${textEs}. En quechua se entiende como: ${textQu}`;
-      
       const utterance = new SpeechSynthesisUtterance(phraseToSpeak);
-      utterance.lang = 'es-PE'; // Configuración regional Perú para naturalidad andina
-      utterance.rate = 0.85;    // Velocidad pausada para mitigar barreras cognitivas
-
+      utterance.lang = 'es-PE';
+      utterance.rate = 0.85;  
       utterance.onstart = () => {
         setIsSpeaking(true);
         setActiveAudioId(id);
       };
-
       utterance.onend = () => {
         setIsSpeaking(false);
         setActiveAudioId(null);
       };
-
       utterance.onerror = () => {
         setIsSpeaking(false);
         setActiveAudioId(null);
       };
-
       speechUtteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
     } else {
       alert("Su navegador o dispositivo no soporta la lectura automática de voz.");
     }
   };
-
   const stopSpeaking = () => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -119,7 +102,6 @@ export default function App() {
       setActiveAudioId(null);
     }
   };
-
   const toggleRecording = () => {
     stopSpeaking();
     setIsRecording(!isRecording);
@@ -130,20 +112,14 @@ export default function App() {
       }, 4000);
     }
   };
-
-  // Paleta Cromática Geo-Cultural Andina (Estilos en línea base para anular el azul Bootstrap clásico)
   const colors = {
     bg: '#FDFBF7',
     text: '#3D2B1F',
-    primary: '#BC4A3C', // Rojo Terracota
-    accent: '#708238',  // Verde Oliva
+    primary: '#BC4A3C',
+    accent: '#708238',  
     border: '#E8E2D2',
     muted: '#8B7E66'
   };
-
-  // ==========================================
-  // BOTÓN DE AUDIO INTEGRADO REUTILIZABLE
-  // ==========================================
   const AudioButton = ({ textEs, textQu, id }: { textEs: string; textQu: string; id: string }) => {
     const isActive = isSpeaking && activeAudioId === id;
     return (
