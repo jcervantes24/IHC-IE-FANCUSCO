@@ -548,3 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
     app.renderCalendar();
   });
 });
+
+// Expose app globally so inline onclick/oninput/onsubmit handlers can access it in Vite production builds
+window.app = app;
+

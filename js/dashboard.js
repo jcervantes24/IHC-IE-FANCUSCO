@@ -744,3 +744,20 @@ function drawChart() {
     .style("fill", "#8B5E3C")
     .text(d => d);
 }
+
+// Expose functions globally so inline onclick/onchange/onsubmit handlers can access them in Vite production builds
+window.showAddAvisoModal = showAddAvisoModal;
+window.showAddTareaModal = showAddTareaModal;
+window.toggleStudentAttendance = toggleStudentAttendance;
+window.updateStudentTasksProgress = updateStudentTasksProgress;
+window.eliminarEstudiante = eliminarEstudiante;
+window.setStudentAttendance = setStudentAttendance;
+window.markAllAsistencia = markAllAsistencia;
+window.playVoiceText = playVoiceText;
+window.deleteTarea = deleteTarea;
+window.deleteAviso = deleteAviso;
+window.saveAviso = saveAviso;
+window.autoTranslateAviso = autoTranslateAviso;
+window.saveTarea = saveTarea;
+window.autoTranslateTarea = autoTranslateTarea;
+
