@@ -41,7 +41,19 @@ function getSchoolData() {
     localStorage.setItem("RIMAY_SCHOOL_DATA", JSON.stringify(DEFAULT_DATA));
     return DEFAULT_DATA;
   }
-  return JSON.parse(stored);
+  try {
+    const parsed = JSON.parse(stored);
+    const merged = { ...DEFAULT_DATA, ...parsed };
+    merged.student = { ...DEFAULT_DATA.student, ...parsed.student };
+    if (!Array.isArray(merged.students)) merged.students = DEFAULT_DATA.students;
+    if (!Array.isArray(merged.messages)) merged.messages = DEFAULT_DATA.messages;
+    if (!Array.isArray(merged.tasks)) merged.tasks = DEFAULT_DATA.tasks;
+    if (!Array.isArray(merged.attendance)) merged.attendance = DEFAULT_DATA.attendance;
+    if (!Array.isArray(merged.weeklyAttendance)) merged.weeklyAttendance = DEFAULT_DATA.weeklyAttendance;
+    return merged;
+  } catch (e) {
+    return DEFAULT_DATA;
+  }
 }
 
 function saveSchoolData(data) {
@@ -177,6 +189,7 @@ const app = {
   // --- RENDER LISTS ---
   renderMessages: function() {
     const container = document.getElementById('messages-list');
+    if (!container) return;
     container.innerHTML = DATA.messages.map(msg => `
       <div class="list-card d-flex flex-column gap-3">
         <div class="d-flex gap-3 align-items-start">
@@ -227,6 +240,7 @@ const app = {
 
   renderAttendance: function() {
     const container = document.getElementById('attendance-list');
+    if (!container) return;
     container.innerHTML = DATA.attendance.map(rec => `
       <div class="list-card d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center gap-3">
@@ -247,6 +261,7 @@ const app = {
 
   renderTasks: function() {
     const container = document.getElementById('tasks-list');
+    if (!container) return;
     container.innerHTML = DATA.tasks.map(task => `
       <div class="list-card">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -265,6 +280,7 @@ const app = {
 
   renderCalendar: function() {
     const grid = document.getElementById('calendar-days');
+    if (!grid) return;
     let html = '';
     // Empty spots
     html += `<div class="cal-day"></div><div class="cal-day"></div><div class="cal-day"></div>`;
@@ -379,9 +395,11 @@ const app = {
 
       // Events for MIC button
       const micBtn = document.getElementById('btn-mic');
-      micBtn.addEventListener('pointerdown', () => this.startRecording());
-      micBtn.addEventListener('pointerup', () => this.stopRecording());
-      micBtn.addEventListener('pointerleave', () => this.stopRecording());
+      if (micBtn) {
+        micBtn.addEventListener('pointerdown', () => this.startRecording());
+        micBtn.addEventListener('pointerup', () => this.stopRecording());
+        micBtn.addEventListener('pointerleave', () => this.stopRecording());
+      }
       
     } else {
       this.showTextControls();

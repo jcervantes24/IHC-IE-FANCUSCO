@@ -46,7 +46,19 @@ function getSchoolData() {
     localStorage.setItem("RIMAY_SCHOOL_DATA", JSON.stringify(DEFAULT_DATA));
     return DEFAULT_DATA;
   }
-  return JSON.parse(stored);
+  try {
+    const parsed = JSON.parse(stored);
+    const merged = { ...DEFAULT_DATA, ...parsed };
+    merged.student = { ...DEFAULT_DATA.student, ...parsed.student };
+    if (!Array.isArray(merged.students)) merged.students = DEFAULT_DATA.students;
+    if (!Array.isArray(merged.messages)) merged.messages = DEFAULT_DATA.messages;
+    if (!Array.isArray(merged.tasks)) merged.tasks = DEFAULT_DATA.tasks;
+    if (!Array.isArray(merged.attendance)) merged.attendance = DEFAULT_DATA.attendance;
+    if (!Array.isArray(merged.weeklyAttendance)) merged.weeklyAttendance = DEFAULT_DATA.weeklyAttendance;
+    return merged;
+  } catch (e) {
+    return DEFAULT_DATA;
+  }
 }
 
 function saveSchoolData(data) {
