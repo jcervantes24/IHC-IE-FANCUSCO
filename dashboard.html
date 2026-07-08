@@ -23,7 +23,6 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
 
   <style>
-    /* Sobrescribiendo algunas variables para escritorio */
     body {
       background-color: var(--bg-color);
       overflow-x: hidden;
@@ -59,6 +58,7 @@
       align-items: center;
       gap: 0.75rem;
       transition: all 0.2s;
+      cursor: pointer;
     }
 
     .nav-link:hover {
@@ -147,6 +147,12 @@
       font-weight: 700;
       font-size: 0.875rem;
       display: inline-block;
+      cursor: pointer;
+      user-select: none;
+      transition: opacity 0.15s;
+    }
+    .badge-status:hover {
+      opacity: 0.85;
     }
 
     .badge-status.present {
@@ -165,56 +171,122 @@
       gap: 1rem;
       margin-bottom: 3rem;
     }
+
+    /* Voice / Accent Color Helpers */
+    .btn-action-outline {
+      border: 2px dashed rgba(201, 123, 99, 0.3);
+      color: var(--terracotta);
+      background: transparent;
+      padding: 0.8rem 1.5rem;
+      border-radius: 16px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    .btn-action-outline:hover {
+      border-color: var(--terracotta);
+      background-color: rgba(201, 123, 99, 0.05);
+    }
+
+    .custom-modal-header {
+      background-color: rgba(201, 123, 99, 0.05);
+      border-bottom: 1px solid rgba(201, 123, 99, 0.1);
+      padding: 1.5rem;
+    }
+    .custom-modal-footer {
+      border-top: 1px solid rgba(139, 94, 60, 0.05);
+      padding: 1.5rem;
+    }
+
+    /* Admin Voice Buttons */
+    .btn-voice-preview {
+      background-color: #f8f9fa;
+      border: 1px solid #e2e8f0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      color: var(--terracotta);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .btn-voice-preview:hover {
+      background-color: var(--terracotta);
+      color: var(--white);
+      transform: scale(1.05);
+    }
+    .btn-voice-preview.active {
+      background-color: var(--green);
+      color: var(--white);
+    }
+
+    /* Section Control */
+    .admin-view-panel {
+      display: none;
+    }
+    .admin-view-panel.active {
+      display: block;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
+
+  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="logo-container">
       <div class="icon-circle terracotta shadow-sm" style="width: 48px; height: 48px;">
-        <i data-feather="message-circle" class="text-white"></i>
+        <i data-feather="pie-chart" class="text-white"></i>
       </div>
-      <h2 class="text-terracotta fw-black fs-4 mb-0">Rimay</h2>
+      <div>
+        <h2 class="text-terracotta fw-black fs-4 mb-0">Rimay</h2>
+        <span class="text-brown small fw-bold opacity-75">Intranet Docente</span>
+      </div>
     </div>
 
-    <nav class="d-flex flex-column gap-1 flex-grow-1">
-      <a href="#" class="nav-link active">
-        <i data-feather="pie-chart"></i>
+    <nav class="d-flex flex-column gap-1 flex-grow-1" id="sidebar-navigation">
+      <a class="nav-link active" data-target="panel-inicio">
+        <i data-feather="grid"></i>
         <span>Panel Principal</span>
       </a>
-      <a href="#" class="nav-link">
-        <i data-feather="users"></i>
-        <span>Estudiantes</span>
-      </a>
-      <a href="#" class="nav-link">
+      <a class="nav-link" data-target="panel-asistencia">
         <i data-feather="check-circle"></i>
         <span>Asistencia</span>
       </a>
-      <a href="#" class="nav-link">
+      <a class="nav-link" data-target="panel-tareas">
         <i data-feather="book-open"></i>
         <span>Tareas</span>
       </a>
-      <a href="#" class="nav-link">
+      <a class="nav-link" data-target="panel-avisos">
         <i data-feather="info"></i>
         <span>Avisos (Mensajes)</span>
       </a>
     </nav>
 
-    <div class="mt-auto">
-      <a href="index.html" class="nav-link text-terracotta">
+    <div class="mt-auto border-top pt-3">
+      <a href="index.html" class="nav-link text-terracotta bg-light border border-dashed rounded-4 p-3" style="border-color: rgba(201,123,99,0.3) !important;">
         <i data-feather="monitor"></i>
-        <span>Vista Móvil (App)</span>
+        <span class="fw-bold">Ir a la App Móvil</span>
       </a>
     </div>
   </aside>
+
+  <!-- Main Content -->
   <main class="main-content">
     <header class="d-flex justify-content-between align-items-center mb-5">
       <div>
-        <h1 class="text-brown fw-black fs-2 mb-1">Dashboard Escolar</h1>
-        <p class="text-brown opacity-75 fw-medium mb-0">I.E. Coronel Francisco Bolognesi</p>
+        <h1 class="text-brown fw-black fs-2 mb-1" id="dynamic-header-title">Dashboard Escolar</h1>
+        <p class="text-brown opacity-75 fw-medium mb-0">I.E. Coronel Francisco Bolognesi (Cusco)</p>
       </div>
       <div class="d-flex align-items-center gap-3">
-        <button class="btn btn-light rounded-circle shadow-sm p-2">
+        <button class="btn btn-light rounded-circle shadow-sm p-2 position-relative" onclick="alert('No hay notificaciones nuevas en este momento.')">
           <i data-feather="bell" class="text-brown"></i>
+          <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
         </button>
         <div class="d-flex align-items-center gap-2 bg-white px-3 py-2 rounded-pill shadow-sm border border-light">
           <div class="icon-circle terracotta-bg text-terracotta" style="width: 32px; height: 32px;">
@@ -225,6 +297,7 @@
       </div>
     </header>
 
+    <!-- Stat Cards (Universal) -->
     <div class="row g-4 mb-5">
       <div class="col-md-3">
         <div class="stat-card green">
@@ -232,8 +305,8 @@
             <i data-feather="users" style="width: 28px; height: 28px;"></i>
           </div>
           <div>
-            <div class="stat-value text-green">342</div>
-            <p class="stat-label">Alumnos Activos</p>
+            <div class="stat-value text-green" id="stat-alumnos">5</div>
+            <p class="stat-label">Alumnos Registrados</p>
           </div>
         </div>
       </div>
@@ -243,7 +316,7 @@
             <i data-feather="check-circle" style="width: 28px; height: 28px;"></i>
           </div>
           <div>
-            <div class="stat-value text-blue">92%</div>
+            <div class="stat-value text-blue" id="stat-asistencia">80%</div>
             <p class="stat-label">Asistencia Hoy</p>
           </div>
         </div>
@@ -254,8 +327,8 @@
             <i data-feather="book-open" style="width: 28px; height: 28px;"></i>
           </div>
           <div>
-            <div class="stat-value text-terracotta">24</div>
-            <p class="stat-label">Tareas Pendientes</p>
+            <div class="stat-value text-terracotta" id="stat-tareas">2</div>
+            <p class="stat-label">Tareas Activas</p>
           </div>
         </div>
       </div>
@@ -265,56 +338,280 @@
             <i data-feather="message-circle" style="width: 28px; height: 28px;"></i>
           </div>
           <div>
-            <div class="stat-value text-yellow">156</div>
-            <p class="stat-label">Interacciones IA</p>
+            <div class="stat-value text-yellow" id="stat-interacciones">156</div>
+            <p class="stat-label">Interacciones Rimay</p>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="row g-4 mb-4">
-      <div class="col-lg-8">
-        <div class="chart-container h-100">
-          <h3 class="text-brown fw-bold fs-4 mb-4">Asistencia Semanal</h3>
-          <div id="attendance-chart" style="width: 100%; height: 300px;"></div>
+
+    <!-- PANEL 1: INICIO (Dashboard Overview) -->
+    <div id="panel-inicio" class="admin-view-panel active">
+      <div class="row g-4 mb-4">
+        <!-- D3 Attendance Chart -->
+        <div class="col-lg-8">
+          <div class="chart-container h-100">
+            <h3 class="text-brown fw-bold fs-4 mb-4">Historial de Asistencia Semanal</h3>
+            <div id="attendance-chart" style="width: 100%; height: 300px;"></div>
+          </div>
+        </div>
+        
+        <!-- Recent Messages / Avisos -->
+        <div class="col-lg-4">
+          <div class="data-table-container h-100">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h3 class="text-brown fw-bold fs-4 mb-0">Últimos Avisos</h3>
+              <button class="btn btn-sm btn-action-outline py-1 px-2" onclick="showAddAvisoModal()">+ Nuevo</button>
+            </div>
+            <div class="d-flex flex-column gap-3" id="recent-messages-list">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
         </div>
       </div>
-      <div class="col-lg-4">
-        <div class="data-table-container h-100">
-          <h3 class="text-brown fw-bold fs-4 mb-4">Últimos Avisos</h3>
-          <div class="d-flex flex-column gap-3" id="recent-messages-list">
+
+      <!-- Students Table -->
+      <div class="data-table-container mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h3 class="text-brown fw-bold fs-4 mb-0">Estado Diario de los Estudiantes</h3>
+            <span class="text-muted small">Haz clic en los badges de asistencia para cambiar el estado. Se sincronizan en vivo.</span>
           </div>
-          <button class="btn btn-light w-100 mt-4 fw-bold text-brown rounded-pill">Ver todos</button>
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary bg-terracotta border-0 rounded-pill px-4 fw-bold d-flex align-items-center gap-2" style="background-color: var(--terracotta);" onclick="showAddAvisoModal()">
+              <i data-feather="plus" style="width: 18px; height: 18px;"></i> Publicar Aviso
+            </button>
+            <button class="btn btn-outline-secondary rounded-pill px-4 fw-bold d-flex align-items-center gap-2" onclick="showAddTareaModal()">
+              <i data-feather="book" style="width: 18px; height: 18px;"></i> Crear Tarea
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-borderless">
+            <thead>
+              <tr>
+                <th>Estudiante</th>
+                <th>Grado</th>
+                <th class="text-center">Asistencia Hoy</th>
+                <th>Avance de Tareas</th>
+                <th class="text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="student-table-body">
+              <!-- Dynamically rendered -->
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
 
-    <div class="data-table-container mb-5">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="text-brown fw-bold fs-4 mb-0">Estado de Estudiantes</h3>
-        <button class="btn btn-primary bg-terracotta border-0 rounded-pill px-4 fw-bold d-flex align-items-center gap-2" style="background-color: var(--terracotta);">
-          <i data-feather="plus" style="width: 18px; height: 18px;"></i> Nuevo Aviso
-        </button>
+
+    <!-- PANEL 2: ASISTENCIA (Dedicated Panel) -->
+    <div id="panel-asistencia" class="admin-view-panel">
+      <div class="data-table-container mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <div>
+            <h3 class="text-brown fw-bold fs-4 mb-1">Registro Diario de Asistencia</h3>
+            <p class="text-muted small mb-0">Toma de asistencia rápida de la sección 3ro "A". Los cambios se actualizan en el acto en el portal del padre.</p>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <label class="text-brown fw-bold">Fecha:</label>
+            <input type="text" class="form-control rounded-pill border shadow-sm text-center px-3" value="24 de Abril" disabled style="width: 150px; background-color:#fff;">
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr class="table-light">
+                <th style="width: 50px;">DNI</th>
+                <th>Nombre del Estudiante</th>
+                <th>Grado</th>
+                <th class="text-center" style="width: 150px;">Asistencia Hoy</th>
+                <th class="text-center">Cambiar Estado</th>
+              </tr>
+            </thead>
+            <tbody id="asistencia-panel-tbody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <button class="btn btn-success rounded-pill px-4 fw-bold" onclick="markAllAsistencia(true)">Asistencia Completa (Todos)</button>
+          <button class="btn btn-danger rounded-pill px-4 fw-bold" onclick="markAllAsistencia(false)">Falta Colectiva</button>
+        </div>
       </div>
-      <div class="table-responsive">
-        <table class="table table-borderless">
-          <thead>
-            <tr>
-              <th>Estudiante</th>
-              <th>Grado/Sección</th>
-              <th>Asistencia Hoy</th>
-              <th>Tareas Entregadas</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="student-table-body">
-          </tbody>
-        </table>
+    </div>
+
+
+    <!-- PANEL 3: TAREAS (Dedicated Panel) -->
+    <div id="panel-tareas" class="admin-view-panel">
+      <div class="data-table-container mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <div>
+            <h3 class="text-brown fw-bold fs-4 mb-1">Administración de Tareas</h3>
+            <p class="text-muted small mb-0">Crea asignaciones con su respectiva traducción al Quechua para fomentar la inclusión lingüística.</p>
+          </div>
+          <button class="btn btn-primary bg-terracotta border-0 rounded-pill px-4 fw-bold d-flex align-items-center gap-2" style="background-color: var(--terracotta);" onclick="showAddTareaModal()">
+            <i data-feather="plus" style="width: 18px; height: 18px;"></i> Crear Tarea
+          </button>
+        </div>
+
+        <div class="row g-4" id="tareas-panel-list">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+
+
+    <!-- PANEL 4: AVISOS (Dedicated Panel) -->
+    <div id="panel-avisos" class="admin-view-panel">
+      <div class="data-table-container mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <div>
+            <h3 class="text-brown fw-bold fs-4 mb-1">Historial de Avisos a Padres</h3>
+            <p class="text-muted small mb-0">Lista completa de comunicados oficiales. Escucha la reproducción de voz para garantizar el correcto doblaje.</p>
+          </div>
+          <button class="btn btn-primary bg-terracotta border-0 rounded-pill px-4 fw-bold d-flex align-items-center gap-2" style="background-color: var(--terracotta);" onclick="showAddAvisoModal()">
+            <i data-feather="plus" style="width: 18px; height: 18px;"></i> Nuevo Comunicado
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr class="table-light">
+                <th style="width: 120px;">Fecha</th>
+                <th style="width: 120px;">Categoría</th>
+                <th>Mensaje Español</th>
+                <th>Mensaje Quechua (Rimay)</th>
+                <th class="text-center" style="width: 120px;">Pronunciar</th>
+                <th class="text-end" style="width: 100px;">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="avisos-panel-tbody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
   </main>
 
+
+  <!-- MODAL: NUEVO AVISO -->
+  <div class="modal fade" id="modal-nuevo-aviso" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 rounded-5 shadow-lg overflow-hidden">
+        <div class="modal-header custom-modal-header d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <div class="icon-circle terracotta-bg text-terracotta" style="width: 40px; height: 40px;">
+              <i data-feather="bell" style="width: 20px;"></i>
+            </div>
+            <h5 class="modal-title fw-bold text-brown" style="font-family:'Outfit';">Publicar Nuevo Aviso Oficial</h5>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="form-nuevo-aviso" onsubmit="saveAviso(event)">
+          <div class="modal-body p-4">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label text-brown fw-bold">Fecha del Comunicado</label>
+                <input type="text" class="form-control rounded-3" id="aviso-fecha" placeholder="Ej: 25 Abril" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-brown fw-bold">Categoría</label>
+                <select class="form-select rounded-3" id="aviso-categoria">
+                  <option value="General">General (Informativo)</option>
+                  <option value="Importante" selected>Importante (Atención)</option>
+                  <option value="Deportes">Deportes (Actividades)</option>
+                  <option value="Académico">Académico (Clases)</option>
+                </select>
+              </div>
+              <div class="col-12 mt-3">
+                <label class="form-label text-brown fw-bold">Contenido en Español</label>
+                <textarea class="form-control rounded-4 p-3 text-brown" id="aviso-es" rows="3" placeholder="Escribe el comunicado que leerán los padres en español..." required></textarea>
+              </div>
+              <div class="col-12 mt-3">
+                <label class="form-label text-terracotta fw-bold d-flex justify-content-between">
+                  <span>Traducción / Explicación al Quechua (Rimay)</span>
+                  <button type="button" class="btn btn-sm btn-link text-decoration-none text-terracotta p-0 fw-bold" onclick="autoTranslateAviso()">
+                    <i data-feather="activity" style="width:14px;"></i> Generar con IA Rimay
+                  </button>
+                </label>
+                <textarea class="form-control rounded-4 p-3 text-brown border-terracotta" style="border-color: rgba(201,123,99,0.3) !important;" id="aviso-qu" rows="3" placeholder="Qillqay runasimipi wawaykipa tayta maman uyarina..." required></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer custom-modal-footer d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary bg-terracotta border-0 rounded-pill px-4 fw-bold" style="background-color: var(--terracotta);">Guardar y Enviar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- MODAL: NUEVA TAREA -->
+  <div class="modal fade" id="modal-nueva-tarea" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 rounded-5 shadow-lg overflow-hidden">
+        <div class="modal-header custom-modal-header d-flex align-items-center justify-content-between" style="background-color: rgba(167, 199, 231, 0.05); border-bottom-color: rgba(167,199,231,0.1);">
+          <div class="d-flex align-items-center gap-2">
+            <div class="icon-circle blue-bg text-blue" style="width: 40px; height: 40px;">
+              <i data-feather="book-open" style="width: 20px;"></i>
+            </div>
+            <h5 class="modal-title fw-bold text-brown" style="font-family:'Outfit';">Asignar Nueva Tarea</h5>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="form-nueva-tarea" onsubmit="saveTarea(event)">
+          <div class="modal-body p-4">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label text-brown fw-bold">Curso / Materia</label>
+                <select class="form-select rounded-3" id="tarea-materia">
+                  <option value="Matemáticas" selected>Matemáticas (Yupay Yachay)</option>
+                  <option value="Comunicación">Comunicación (Simi Yachay)</option>
+                  <option value="Ciencia y Tecnología">Ciencia y Amb. (Pacha Yachay)</option>
+                  <option value="Arte y Cultura">Arte y Cultura (Kusi Yachay)</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-brown fw-bold">Fecha de Entrega (Límite)</label>
+                <input type="text" class="form-control rounded-3" id="tarea-fecha" placeholder="Ej: 26 Abril" required>
+              </div>
+              <div class="col-12 mt-3">
+                <label class="form-label text-brown fw-bold">Descripción en Español</label>
+                <textarea class="form-control rounded-4 p-3 text-brown" id="tarea-es" rows="3" placeholder="Describe los ejercicios o actividades que deben realizar..." required></textarea>
+              </div>
+              <div class="col-12 mt-3">
+                <label class="form-label text-terracotta fw-bold d-flex justify-content-between">
+                  <span>Traducción / Explicación al Quechua (Rimay)</span>
+                  <button type="button" class="btn btn-sm btn-link text-decoration-none text-terracotta p-0 fw-bold" onclick="autoTranslateTarea()">
+                    <i data-feather="activity" style="width:14px;"></i> Generar con IA Rimay
+                  </button>
+                </label>
+                <textarea class="form-control rounded-4 p-3 text-brown border-terracotta" style="border-color: rgba(201,123,99,0.3) !important;" id="tarea-qu" rows="3" placeholder="Runasimipi qillqana..." required></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer custom-modal-footer d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary bg-blue border-0 rounded-pill px-4 fw-bold text-brown" style="background-color: var(--blue);">Asignar Tarea</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Main Dashboard Script -->
   <script src="js/dashboard.js"></script>
   <script>
     feather.replace();

@@ -1,13 +1,20 @@
 
-const DATA = {
+const DEFAULT_DATA = {
   student: {
     name: "Alex Quispe Condori",
     school: "I.E. Coronel Francisco Bolognesi",
     nextEvent: "Reunión de Padres - 25 Abril"
   },
+  students: [
+    { id: 101, name: "Alex Quispe Condori", grade: "3ro A", status: "present", tasks: "85%" },
+    { id: 102, name: "Maria Mamani Ccuta", grade: "3ro A", status: "present", tasks: "100%" },
+    { id: 103, name: "Luis Huaman Paucar", grade: "3ro B", status: "absent", tasks: "60%" },
+    { id: 104, name: "Ana Torres Vilca", grade: "4to C", status: "present", tasks: "95%" },
+    { id: 105, name: "Carlos Cusi Yupanqui", grade: "2do A", status: "present", tasks: "40%" }
+  ],
   messages: [
-    { id: 1, date: '23 Abril', es: 'No hay clases mañana por desinfección del colegio.', qu: 'Manam paqarin yachaywasi kanqachu, pichanqaku chaymi.' },
-    { id: 2, date: '21 Abril', es: 'Reunión de padres este viernes a las 4pm.', qu: 'Tayta mamakuna huñunakuy kanqa kay diviernes tawa aspiyta.' }
+    { id: 1, date: '23 Abril', es: 'No hay clases mañana por desinfección del colegio.', qu: 'Manam paqarin yachaywasi kanqachu, pichanqaku chaymi.', type: 'General' },
+    { id: 2, date: '21 Abril', es: 'Reunión de padres este viernes a las 4pm.', qu: 'Tayta mamakuna huñunakuy kanqa kay diviernes tawa aspiyta.', type: 'Importante' }
   ],
   tasks: [
     { id: 1, subject: 'Matemáticas', es: 'Hacer páginas 12 y 13 del libro.', qu: 'Yupay yachay rapikunata 12, 13 ruwana.', due: '25 Abril' },
@@ -17,8 +24,31 @@ const DATA = {
     { date: '24 Abril', status: 'present', es: 'Asistió', qu: 'Hamurqan' },
     { date: '23 Abril', status: 'present', es: 'Asistió', qu: 'Hamurqan' },
     { date: '22 Abril', status: 'absent', es: 'Faltó', qu: 'Mana hamurqanchu' }
-  ]
+  ],
+  weeklyAttendance: [
+    { day: "Lun", present: 330, absent: 12 },
+    { day: "Mar", present: 325, absent: 17 },
+    { day: "Mié", present: 340, absent: 2 },
+    { day: "Jue", present: 338, absent: 4 },
+    { day: "Vie", present: 342, absent: 0 }
+  ],
+  interactionCount: 156
 };
+
+function getSchoolData() {
+  let stored = localStorage.getItem("RIMAY_SCHOOL_DATA");
+  if (!stored) {
+    localStorage.setItem("RIMAY_SCHOOL_DATA", JSON.stringify(DEFAULT_DATA));
+    return DEFAULT_DATA;
+  }
+  return JSON.parse(stored);
+}
+
+function saveSchoolData(data) {
+  localStorage.setItem("RIMAY_SCHOOL_DATA", JSON.stringify(data));
+}
+
+let DATA = getSchoolData();
 
 const app = {
   lang: 'es', // 'es' o 'qu'
@@ -399,6 +429,12 @@ const app = {
   processChatText: function(text) {
     this.appendChatMessage(text, 'user');
     
+    // Increment interaction count in state
+    DATA.interactionCount = (DATA.interactionCount || 156) + 1;
+    saveSchoolData(DATA);
+    // Dispatch local event to update same window
+    window.dispatchEvent(new Event('localDataChanged'));
+    
     // Simular procesamiento
     setTimeout(() => {
       const response = this.getLocalResponse(text);
@@ -466,4 +502,31 @@ const app = {
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
   app.init();
+  
+  // Tab synchronization and real-time updates
+  window.addEventListener("storage", (e) => {
+    if (e.key === "RIMAY_SCHOOL_DATA" && e.newValue) {
+      DATA = JSON.parse(e.newValue);
+      // Re-render everything with the new data
+      app.renderMessages();
+      app.renderAttendance();
+      app.renderTasks();
+      app.renderCalendar();
+      
+      // Update student details dynamically
+      const nameEl = document.getElementById('student-name');
+      const schoolEl = document.getElementById('student-school');
+      if (nameEl && DATA.student) nameEl.textContent = DATA.student.name;
+      if (schoolEl && DATA.student) schoolEl.textContent = DATA.student.school;
+    }
+  });
+
+  // Listener for changes made within the same window (e.g. chat increments)
+  window.addEventListener("localDataChanged", () => {
+    DATA = getSchoolData();
+    app.renderMessages();
+    app.renderAttendance();
+    app.renderTasks();
+    app.renderCalendar();
+  });
 });
