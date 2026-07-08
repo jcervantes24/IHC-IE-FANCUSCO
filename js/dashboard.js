@@ -1,14 +1,8 @@
-/**
- * Lógica del Dashboard Web Administrativo
- * Muestra las métricas usando D3.js y renderiza la data simulada compartida con la app móvil.
- */
-
-// Data simulada que coincide con script.js
 const ADMIN_DATA = {
   messages: [
-    { id: 1, date: '23 Abril', text: 'No hay clases mañana por desinfección del colegio.', type: 'General' },
-    { id: 2, date: '21 Abril', text: 'Reunión de padres este viernes a las 4pm.', type: 'Importante' },
-    { id: 3, date: '15 Abril', text: 'Inicio de campeonato interno.', type: 'Deportes' }
+    { id: 1, date: "23 Abril", text: "No hay clases mañana por desinfección del colegio.", type: "General" },
+    { id: 2, date: "21 Abril", text: "Reunión de padres este viernes a las 4pm.", type: "Importante" },
+    { id: 3, date: "15 Abril", text: "Inicio de campeonato interno.", type: "Deportes" }
   ],
   students: [
     { id: 101, name: "Alex Quispe Condori", grade: "3ro A", status: "present", tasks: "85%" },
@@ -33,29 +27,32 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function renderMessages() {
-  const container = document.getElementById('recent-messages-list');
+  const container = document.getElementById("recent-messages-list");
+
   container.innerHTML = ADMIN_DATA.messages.map(msg => `
-    <div class="p-3 rounded-4 border d-flex gap-3 align-items-center" style="background: #f8f9fa;">
-      <div class="icon-circle ${msg.type === 'Importante' ? 'terracotta-bg text-terracotta' : 'blue-bg text-blue'}" style="width: 48px; height: 48px; flex-shrink: 0;">
-        <i data-feather="${msg.type === 'Importante' ? 'alert-triangle' : 'info'}"></i>
+    <div class="p-3 rounded-4 border d-flex gap-3 align-items-center" style="background:#f8f9fa;">
+      <div class="icon-circle ${msg.type === "Importante" ? "terracotta-bg text-terracotta" : "blue-bg text-blue"}" style="width:48px;height:48px;flex-shrink:0;">
+        <i data-feather="${msg.type === "Importante" ? "alert-triangle" : "info"}"></i>
       </div>
       <div>
-        <span class="d-block fw-bold" style="color: var(--text-brown);">${msg.date}</span>
-        <span class="d-block small" style="color: var(--text-brown); opacity: 0.8;">${msg.text}</span>
+        <span class="d-block fw-bold" style="color:var(--text-brown);">${msg.date}</span>
+        <span class="d-block small" style="color:var(--text-brown);opacity:.8;">${msg.text}</span>
       </div>
     </div>
-  `).join('');
+  `).join("");
+
   if (window.feather) feather.replace();
 }
 
 function renderTable() {
-  const tbody = document.getElementById('student-table-body');
+  const tbody = document.getElementById("student-table-body");
+
   tbody.innerHTML = ADMIN_DATA.students.map(student => `
     <tr>
       <td class="fw-bold">
         <div class="d-flex align-items-center gap-3">
-          <div class="icon-circle bg-light border" style="width: 40px; height: 40px;">
-            <i data-feather="user" style="width:18px; color: var(--text-brown);"></i>
+          <div class="icon-circle bg-light border" style="width:40px;height:40px;">
+            <i data-feather="user" style="width:18px;color:var(--text-brown);"></i>
           </div>
           ${student.name}
         </div>
@@ -63,79 +60,117 @@ function renderTable() {
       <td>${student.grade}</td>
       <td>
         <span class="badge-status ${student.status}">
-          ${student.status === 'present' ? 'Asistió' : 'Faltó'}
+          ${student.status === "present" ? "Asistió" : "Faltó"}
         </span>
       </td>
       <td>
         <div class="d-flex align-items-center gap-2">
-          <div class="progress flex-grow-1" style="height: 8px;">
-            <div class="progress-bar ${parseInt(student.tasks) >= 80 ? 'bg-success' : (parseInt(student.tasks) >= 50 ? 'bg-warning' : 'bg-danger')}" role="progressbar" style="width: ${student.tasks}" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+          <div class="progress flex-grow-1" style="height:8px;">
+            <div
+              class="progress-bar ${
+                parseInt(student.tasks) >= 80
+                  ? "bg-success"
+                  : parseInt(student.tasks) >= 50
+                  ? "bg-warning"
+                  : "bg-danger"
+              }"
+              role="progressbar"
+              style="width:${student.tasks}"
+              aria-valuemin="0"
+              aria-valuemax="100">
+            </div>
           </div>
           <span class="small fw-bold">${student.tasks}</span>
         </div>
       </td>
       <td>
-        <button class="btn btn-sm btn-light rounded-circle shadow-sm"><i data-feather="more-horizontal"></i></button>
+        <button class="btn btn-sm btn-light rounded-circle shadow-sm">
+          <i data-feather="more-horizontal"></i>
+        </button>
       </td>
     </tr>
-  `).join('');
+  `).join("");
+
   if (window.feather) feather.replace();
 }
 
-// D3.js Chart implementation
 function drawChart() {
-  const container = document.getElementById('attendance-chart');
+  const container = document.getElementById("attendance-chart");
+
   if (!container) return;
 
   const data = ADMIN_DATA.weeklyAttendance;
-  
+
   const width = container.clientWidth;
   const height = container.clientHeight;
-  const margin = { top: 20, right: 30, bottom: 30, left: 40 };
 
-  const svg = d3.select("#attendance-chart")
+  const margin = {
+    top: 20,
+    right: 30,
+    bottom: 30,
+    left: 40
+  };
+
+  const svg = d3
+    .select("#attendance-chart")
     .append("svg")
     .attr("width", width)
     .attr("height", height);
 
-  const x = d3.scaleBand()
+  const x = d3
+    .scaleBand()
     .domain(data.map(d => d.day))
     .range([margin.left, width - margin.right])
     .padding(0.3);
 
-  const y = d3.scaleLinear()
+  const y = d3
+    .scaleLinear()
     .domain([0, d3.max(data, d => d.present + d.absent)])
     .nice()
     .range([height - margin.bottom, margin.top]);
 
-  // Color variables mapped to CSS
-  const colorPresent = "#6B8F71"; // var(--green)
-  const colorAbsent = "#C97B63";  // var(--terracotta)
+  const colorPresent = "#6B8F71";
+  const colorAbsent = "#C97B63";
 
-  // Axes
-  svg.append("g")
-    .attr("transform", \`translate(0,\${height - margin.bottom})\`)
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${height - margin.bottom})`)
     .call(d3.axisBottom(x).tickSizeOuter(0))
-    .call(g => g.select(".domain").remove()) // remove bottom line
-    .call(g => g.selectAll("text").style("font-family", "Inter").style("font-weight", "600").style("color", "#8B5E3C").style("font-size", "14px"));
+    .call(g => g.select(".domain").remove())
+    .call(g =>
+      g.selectAll("text")
+        .style("font-family", "Inter")
+        .style("font-weight", "600")
+        .style("font-size", "14px")
+    );
 
-  svg.append("g")
-    .attr("transform", \`translate(\${margin.left},0)\`)
+  svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y).ticks(5))
-    .call(g => g.select(".domain").remove()) // remove left line
-    .call(g => g.selectAll(".tick line").attr("x2", width - margin.left - margin.right).attr("stroke-opacity", 0.1)) // Grid lines
-    .call(g => g.selectAll("text").style("font-family", "Inter").style("color", "#8B5E3C").style("font-size", "12px").style("opacity", 0.7));
+    .call(g => g.select(".domain").remove())
+    .call(g =>
+      g.selectAll(".tick line")
+        .attr("x2", width - margin.left - margin.right)
+        .attr("stroke-opacity", 0.1)
+    )
+    .call(g =>
+      g.selectAll("text")
+        .style("font-family", "Inter")
+        .style("font-size", "12px")
+        .style("opacity", 0.7)
+    );
 
-  // Stack setup
   const stack = d3.stack().keys(["present", "absent"]);
   const series = stack(data);
 
-  const colors = d3.scaleOrdinal()
+  const colors = d3
+    .scaleOrdinal()
     .domain(["present", "absent"])
     .range([colorPresent, colorAbsent]);
 
-  // Bars
-  svg.append("g")
+  svg
+    .append("g")
     .selectAll("g")
     .data(series)
     .join("g")
@@ -147,26 +182,28 @@ function drawChart() {
     .attr("y", d => y(d[1]))
     .attr("height", d => y(d[0]) - y(d[1]))
     .attr("width", x.bandwidth())
-    .attr("rx", 6); // rounded corners for top
+    .attr("rx", 6);
 
-  // Leyenda
-  const legend = svg.append("g")
+  const legend = svg
+    .append("g")
     .attr("font-family", "Inter")
     .attr("font-size", 12)
     .attr("text-anchor", "end")
     .selectAll("g")
     .data(["Asistentes", "Faltas"])
     .join("g")
-    .attr("transform", (d, i) => \`translate(0,\${i * 20 + 10})\`);
+    .attr("transform", (_, i) => `translate(0,${i * 20 + 10})`);
 
-  legend.append("rect")
+  legend
+    .append("rect")
     .attr("x", width - 19)
     .attr("width", 15)
     .attr("height", 15)
     .attr("rx", 4)
-    .attr("fill", (d, i) => i === 0 ? colorPresent : colorAbsent);
+    .attr("fill", (_, i) => (i === 0 ? colorPresent : colorAbsent));
 
-  legend.append("text")
+  legend
+    .append("text")
     .attr("x", width - 28)
     .attr("y", 9.5)
     .attr("dy", "0.32em")
